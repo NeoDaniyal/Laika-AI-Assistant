@@ -13,7 +13,7 @@ from backend.database import chats_collection
 from backend.llm import ask_llm_stream
 from backend.prompts import build_system_message
 from backend.context import build_context
-
+from backend.memory import extract_and_store_memories 
 app = FastAPI(title="AI Chatbot Backend")
 
 app.add_middleware(
@@ -115,6 +115,13 @@ async def chat_stream(request: ChatRequest):
                     {"_id": ObjectId(request.chat_id)},
                     update_query
                 )
+                if request.messages:
+                    user_last_prompt = request.messages[-1].content
+                    threading.Thread(
+                    target=extract_and_store_memories,
+                    args=(user_last_prompt, full_response),
+                    daemon=True
+                    ).start()
 
         return StreamingResponse(async_token_stream(), media_type="text/plain")
 
