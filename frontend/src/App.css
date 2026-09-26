@@ -1,0 +1,373 @@
+/* ==========================================================================
+   1. GLOBAL RESET & BASE STYLES
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #0f172a;
+  color: #f8fafc;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   2. APP LAYOUT & SIDEBAR
+   ========================================================================== */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: #0b0f19;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.new-chat-btn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.new-chat-btn:hover {
+  background-color: #1e293b;
+  border-color: #475569;
+}
+
+.chat-history-list {
+  margin-top: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-title {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 8px;
+  padding-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+.history-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #94a3b8;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+  transition: all 0.15s ease;
+}
+
+.history-item:hover {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+.history-item.active {
+  background-color: #1e293b;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   3. CHAT AREA & MESSAGES
+   ========================================================================== */
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100vh;
+  min-width: 0; /* Prevents horizontal flex overflow */
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.chat-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #1e293b;
+  background-color: #0f172a;
+}
+
+.chat-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scroll-behavior: smooth;
+}
+
+/* Message Rows */
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 85%;
+  min-width: 0;
+}
+
+.message-row.assistant {
+  align-self: flex-start;
+  flex-direction: row;
+}
+
+.message-row.assistant .message-bubble {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-radius: 4px 16px 16px 16px;
+  border: 1px solid #334155;
+}
+
+.message-row.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message-row.user .message-bubble {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-radius: 16px 4px 16px 16px;
+}
+
+.avatar {
+  font-size: 18px;
+  user-select: none;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1e293b;
+  border-radius: 50%;
+  border: 1px solid #334155;
+}
+
+.message-bubble {
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  min-width: 0;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.thinking-dots {
+  font-style: italic;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==========================================================================
+   4. MARKDOWN TYPOGRAPHY
+   ========================================================================== */
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3 {
+  margin-top: 14px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.3;
+}
+
+.message-bubble h1 { font-size: 20px; }
+.message-bubble h2 { font-size: 18px; }
+.message-bubble h3 { font-size: 16px; }
+
+.message-bubble p {
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.message-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.message-bubble ul,
+.message-bubble ol {
+  margin-left: 20px;
+  margin-bottom: 12px;
+}
+
+.message-bubble li {
+  margin-bottom: 4px;
+}
+
+.message-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.message-bubble th,
+.message-bubble td {
+  border: 1px solid #334155;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.message-bubble th {
+  background-color: #0f172a;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   5. CODE CARDS & SYNTAX HIGHLIGHTING (CHATGPT STYLE)
+   ========================================================================== */
+/* Inline Code */
+.inline-code {
+  background-color: #334155;
+  color: #38bdf8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', Consolas, Monaco, monospace;
+  font-size: 13.5px;
+  white-space: normal;
+}
+
+/* Code Card Container */
+.code-block-container {
+  margin: 14px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #334155;
+  background-color: #1e293b;
+  white-space: normal !important; /* Fixes token vertical stacking */
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #0f172a;
+  padding: 8px 14px;
+  border-bottom: 1px solid #334155;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+}
+
+.code-language {
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.copy-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copy-btn:hover {
+  background-color: #334155;
+  color: #f8fafc;
+}
+
+/* Syntax Highlighter Container Override */
+.code-block-container pre {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  overflow-x: auto !important;
+}
+
+.code-block-container code {
+  font-family: 'Fira Code', Consolas, Monaco, monospace !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  white-space: pre !important;
+  word-break: normal !important;
+}
+
+/* ==========================================================================
+   6. INPUT FORM AREA
+   ========================================================================== */
+.input-form {
+  padding: 16px 24px;
+  display: flex;
+  gap: 12px;
+  background-color: #0f172a;
+  border-top: 1px solid #1e293b;
+}
+
+.input-form input {
+  flex: 1;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-form input:focus {
+  border-color: #2563eb;
+}
+
+.input-form button {
+  background-color: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.input-form button:hover {
+  background-color: #1d4ed8;
+}
+
+.input-form button:disabled {
+  background-color: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
