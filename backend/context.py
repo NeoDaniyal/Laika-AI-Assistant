@@ -1,12 +1,12 @@
 """
 context.py
 ==========
-Manages context window truncation, session summarization, and long-term memory injection.
+Manages context window truncation, session summarization, and query-relevant long-term memory retrieval.
 """
 
 from typing import List, Dict
 from backend.summarizer import summarize_messages
-from backend.memory import format_memories_for_prompt
+from backend.memory import format_relevant_memories_for_prompt
 
 
 def estimate_tokens(text: str) -> int:
@@ -23,19 +23,28 @@ async def build_context(
     system_msg = next((m for m in messages if m["role"] == "system"), None)
     chat_messages = [m for m in messages if m["role"] != "system"]
 
-    # Asynchronously retrieve Cross-Session Long-Term Memory
-    memory_block = await format_memories_for_prompt(user_id=user_id)
+    # Extract last user prompt to drive memory retrieval
+    last_user_prompt = ""
+    for msg in reversed(chat_messages):
+        if msg["role"] == "user":
+            last_user_prompt = msg["content"]
+            break
 
-    # Base payload structure
+    # Selectively retrieve relevant memories based on query
+    memory_block = await format_relevant_memories_for_prompt(
+        user_query=last_user_prompt, 
+        user_id=user_id
+    )
+
     final_messages = []
     if system_msg:
         final_messages.append(system_msg)
 
-    # 1. Inject Long-Term Memory (Applies across all chats)
+    # 1. Inject Relevant Memories
     if memory_block:
         final_messages.append({"role": "system", "content": memory_block})
 
-    # 2. Inject Active Session Summary (Applies to this chat)
+    # 2. Inject Active Session Summary
     if existing_summary:
         final_messages.append({"role": "system", "content": f"[Active Session Summary]: {existing_summary}"})
 
@@ -49,7 +58,7 @@ async def build_context(
             "summarized_new_chunks": False
         }
 
-    # Context threshold exceeded: Split and summarize older messages
+    # Context threshold exceeded: Split and summarize older turns
     recent_messages = chat_messages[-4:]
     old_messages = chat_messages[:-4]
 
@@ -59,7 +68,7 @@ async def build_context(
     new_summary = summarize_messages(old_messages)
 
     if new_summary:
-        final_messages.append({"role": "system", "content": f"[Active Session Summary]: {new_summary}"})
+        final_messages.append({"role": "system", "content": f"[Active Session Summary]: new_summary"})
 
     final_messages.extend(recent_messages)
 

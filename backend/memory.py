@@ -9,7 +9,7 @@ import json
 import re
 from typing import List, Dict
 from backend.database import db
-from backend.llm import ask_llm
+from backend.llm import ask_llm_stream
 
 memories_collection = db["user_memories"]
 
@@ -60,7 +60,7 @@ async def extract_and_store_memories(user_message: str, assistant_response: str,
     ]
 
     try:
-        raw_result = ask_llm(messages)
+        raw_result = ask_llm_stream(messages)
         raw_output = raw_result if isinstance(raw_result, str) else "".join(list(raw_result))
 
         clean_json = raw_output.replace("```json", "").replace("```", "").strip()
