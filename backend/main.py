@@ -53,7 +53,7 @@ async def chat_stream(request: ChatRequest):
                 existing_summary = chat_doc.get("summary", "")
 
         # 4. Build context with summarization pipeline
-        context_data = build_context(
+        context_data = await build_context(
             messages=full_history,
             existing_summary=existing_summary,
             max_tokens=3000
