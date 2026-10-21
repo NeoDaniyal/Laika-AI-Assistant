@@ -60,10 +60,11 @@ async def extract_and_store_memories(user_message: str, assistant_response: str,
     ]
 
     try:
-        raw_result = ask_llm_stream(messages)
-        raw_output = raw_result if isinstance(raw_result, str) else "".join(list(raw_result))
+        full_output = ""
+        async for token in ask_llm_stream(messages):
+           full_output += token 
 
-        clean_json = raw_output.replace("```json", "").replace("```", "").strip()
+        clean_json = full_output.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_json)
 
         if data.get("has_memory") and data.get("memories"):

@@ -96,7 +96,7 @@ async def build_context(
     if existing_summary:
         old_messages.insert(0, {"role": "user", "content": f"Prior Context Summary: {existing_summary}"})
 
-    new_summary = summarize_messages(old_messages)
+    new_summary =  await summarize_messages(old_messages)
 
     if new_summary:
         final_messages.append({"role": "system", "content": f"[Active Session Summary]: {new_summary}"})

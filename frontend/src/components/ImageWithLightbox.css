@@ -1,0 +1,69 @@
+.image-with-lightbox{
+    position: relative;
+    display: inline-block;
+    margin-top: 12px;
+    max-width: 100%;
+}
+
+.chat-image-preview{
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    border: 2px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    cursor: zoom-in;
+    transition: transform 0.2s ease-in-out;
+}
+
+.chat-image-preview:hover{
+    transform: scale(1.01);
+}
+
+.zoom-cue{
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 4px  10px;
+    background-color: rgba(15, 23, 42, 0.6);
+    color: #cbd5e1;
+    font-size: 11px;
+    font-family: monospace;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.image-with-lightbox:hover .zoom-cue{
+    opacity: 1;
+}
+
+.lightbox-overlay-controls{
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+    display: flex;
+    gap: 8px;
+}
+
+.lightbox-download-btn{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background-color: rgba(30, 41, 59, 0.8);
+    color: white;
+    border: none;
+    border-radius: 99px;
+    cursor: pointer;
+    backdrop-filter: blur(2px);
+    font-family: inherit;
+    font-size: 14px;
+    transition: background-color 0.2 ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-download-btn:hover{
+    background-color: rgba(51, 65, 85, 0.8);
+}

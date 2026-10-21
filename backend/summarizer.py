@@ -21,8 +21,8 @@ Keep the summary under 150 words. Do NOT include greetings or meta-commentary.
 Conversation History to Summarize:
 """
 
-def summarize_messages(messages: List[Dict[str, str]]) -> str:
-    """Takes a list of message dicts and generates a concise summary string."""
+async def summarize_messages(messages: List[Dict[str, str]]) -> str:
+    """Takes a list of message dicts and generates a concise summary string asynchronously."""
     if not messages:
         return ""
 
@@ -37,8 +37,10 @@ def summarize_messages(messages: List[Dict[str, str]]) -> str:
     ]
 
     try:
-        # Collect and join all streaming tokens yielded by ask_llm_stream
-        summary_text = "".join(list(ask_llm_stream(prompt)))
+        summary_text = ""
+        async for token in ask_llm_stream(prompt):
+            summary_text += token
+            
         return summary_text.strip()
     except Exception as e:
         print(f"[Summarization Error]: {e}")

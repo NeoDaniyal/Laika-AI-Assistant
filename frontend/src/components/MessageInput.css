@@ -1,0 +1,140 @@
+.input-form {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #25252b;
+  border-top: 1px solid #33333d;
+  width: 100%;
+  box-sizing: border-box; /* Ensures padding doesn't cause overflow */
+}
+
+/* Upload (+) Button */
+.upload-btn {
+  background-color: #33333d;
+  color: #a0a0b0;
+  border: 1px solid #444452;
+  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  font-size: 1.4rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevents button from shrinking */
+}
+
+.upload-btn:hover:not(:disabled) {
+  background-color: #444452;
+  color: #ffffff;
+  border-color: #007acc;
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Middle Text Input */
+.message-input {
+  flex: 1; /* Absorbs all remaining space */
+  min-width: 0; /* CRITICAL: Allows flex child to shrink properly instead of overflowing */
+  height: 42px; /* Matches button height for clean alignment */
+  background-color: #1e1e24;
+  border: 1px solid #33333d;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 0 14px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.message-input:focus {
+  border-color: #007acc;
+}
+
+.message-input:disabled {
+  opacity: 0.6;
+}
+
+/* Send Button */
+.send-btn {
+  background-color: #007acc;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  height: 42px; /* Matches button height */
+  padding: 0 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0; /* Stops button from being compressed */
+  white-space: nowrap; /* Prevents text wrap */
+}
+
+.send-btn:hover:not(:disabled) {
+  background-color: #005999;
+}
+
+.send-btn:disabled {
+  background-color: #33333d;
+  color: #666675;
+  cursor: not-allowed;
+}
+
+.message-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: #1e1e24;
+  border-top: 1px solid #33333d;
+}
+
+.upload-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  font-size: 0.85rem;
+}
+
+.file-preview-pill{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2a2d35;
+  border: 1px solid #007acc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: #00bcd4;
+}
+.file-preview-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 80px;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+
+.remove-file-btn{
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.status-text{
+  color: #a0a0b0;
+  font-style: italic;
+  font-size: 0.8rem;
+}

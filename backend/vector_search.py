@@ -49,10 +49,20 @@ async def search_similar_chunks(query: str, top_k: int=2, score_threshold: float
     stored_chunks = await chunks_collection.find({"user_id": user_id}).to_list(length=100000)
 
     scored_chunks = []
+
     for chunk in stored_chunks:
         chunk_vector = chunk.get("embedding")
+
         if chunk_vector:
             score = cosine_similarity(query_vector, chunk_vector)
+
+            # Debug: inspect retrieval quality
+            print(
+                f"[RAG DEBUG] File={chunk.get('filename')} "
+                f"Chunk={chunk.get('chunk_index')} "
+                f"Score={score:.4f}"
+            )
+
             if score >= score_threshold:
                 scored_chunks.append({
                     "chunk_id": str(chunk["_id"]),
@@ -62,8 +72,14 @@ async def search_similar_chunks(query: str, top_k: int=2, score_threshold: float
                     "score": score
                 })
 
-    scored_chunks.sort(key=lambda x: x["score"], reverse=True)
-    return scored_chunks[:top_k]
+            scored_chunks.sort(key=lambda x: x["score"], reverse=True)
+
+            print(f"[RAG DEBUG] User query: {query}")
+            print(f"[RAG DEBUG] Stored chunks: {len(stored_chunks)}")
+            print(f"[RAG DEBUG] Retrieved chunks: {len(scored_chunks[:top_k])}")
+
+            return scored_chunks[:top_k]
+
 
 def build_retrieval_context(retrieved_chunks: List[Dict[str, Any]]) -> str:
     """
