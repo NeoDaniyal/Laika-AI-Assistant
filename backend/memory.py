@@ -9,7 +9,7 @@ import json
 import re
 from typing import List, Dict
 from backend.database import db
-from backend.llm import ask_llm_stream
+from backend.llm import client
 
 memories_collection = db["user_memories"]
 
@@ -48,7 +48,7 @@ Assistant Response: {assistant_response}
 
 
 async def extract_and_store_memories(user_message: str, assistant_response: str, user_id: str = "default_user"):
-    """Extracts memories and performs deduplicated upserts in MongoDB."""
+    """Extracts memories and performs deduplicated upserts in MongoDB using a dedicated non-routing LLM call."""
     prompt = EXTRACTION_PROMPT.format(
         user_message=user_message,
         assistant_response=assistant_response
@@ -60,9 +60,13 @@ async def extract_and_store_memories(user_message: str, assistant_response: str,
     ]
 
     try:
-        full_output = ""
-        async for token in ask_llm_stream(messages):
-           full_output += token 
+        response = await client.chat.completions.create(
+            model="mercury-3",
+            messages=messages,
+            temperature=0,
+            max_tokens=500,
+        )
+        full_output = response.choices[0].message.content or ""
 
         clean_json = full_output.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_json)
@@ -75,7 +79,6 @@ async def extract_and_store_memories(user_message: str, assistant_response: str,
                 importance = mem.get("importance", "medium")
 
                 if key and val:
-                    # Upsert guarantees deduplication and updates existing keys automatically
                     await memories_collection.update_one(
                         {"user_id": user_id, "key": key},
                         {"$set": {
@@ -98,7 +101,6 @@ async def retrieve_relevant_memories(user_query: str, user_id: str = "default_us
     Selectively retrieves memories matching the user query keywords, 
     plus high-importance identity memories.
     """
-    # 1. Fetch HIGH importance core identity memories (always relevant)
     high_priority_cursor = memories_collection.find({
         "user_id": user_id,
         "importance": "high"
@@ -106,13 +108,11 @@ async def retrieve_relevant_memories(user_query: str, user_id: str = "default_us
     relevant_memories = await high_priority_cursor.to_list(length=10)
     seen_keys = {m["key"] for m in relevant_memories}
 
-    # 2. Extract keywords from user query
     words = re.findall(r'\b\w{3,}\b', user_query.lower())
     ignore_words = {"what", "which", "where", "when", "your", "that", "this", "have", "with", "from", "build"}
     keywords = [w for w in words if w not in ignore_words]
 
     if keywords:
-        # Build regex matching for key, value, or category
         regex_pattern = "|".join(keywords)
         keyword_cursor = memories_collection.find({
             "user_id": user_id,

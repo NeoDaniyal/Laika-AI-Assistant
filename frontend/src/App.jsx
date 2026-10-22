@@ -10,10 +10,43 @@ export default function App() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+
+  const abortControllerRef = useRef(null)
+
+  const handleStopGeneration = () => {
+    if(abortControllerRef.current){
+      abortControllerRef.current = null;
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchChats();
   }, []);
+
+  const parseLegacyMessageSources = (msg) =>{
+    if (msg.content && (msg.content.includes('SOURCES_JSON:') || msg.content.includes('__SOURCES_JSON__'))){
+      const delimiter = msg.content.includes('SOURCES_JSON:') ? 'SOURCES_JSON:' : '__SOURCES_JSON__:';
+      const parts = msg.content.split(delimiter)
+      const cleanContent = parts[0].trim()
+
+      let parsedSources = msg.sources || []
+      if (parts[1]) {
+        try {
+          parsedSources = JSON.parse(parts[1].trim())
+        } catch (err) {
+          console.error("Failed to parse legacy sources json.", err)
+        }
+      }
+        return{
+          ...msg,
+          content: cleanContent,
+          sources: parsedSources
+        }
+      }
+      return msg;
+  }
 
   const fetchChats = async () => {
     try {
@@ -32,7 +65,8 @@ export default function App() {
     try {
       const res = await fetch(`http://127.0.0.1:8000/chats/${chatId}`);
       const data = await res.json();
-      setMessages(data.messages || []);
+      const cleanMessages = (data.messages || []).map(parseLegacyMessageSources)
+      setMessages(cleanMessages);
     } catch (err) {
       console.error('Failed to load conversation:', err);
     }
@@ -43,6 +77,14 @@ export default function App() {
     setMessages([]);
   };
   const handleSendMessage = async (userMessage) => {
+
+    if(abortControllerRef.current){
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const updatedMessages = [
       ...messages,
       { role: 'user', content: userMessage },
@@ -64,6 +106,7 @@ export default function App() {
           user_id: 'default_user',
           messages: updatedMessages
         }),
+        signal: controller.signal;
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -84,7 +127,6 @@ export default function App() {
         buffer += decoder.decode(value, { stream: true });
         const blocks = buffer.split('\n\n');
 
-        // Keep incomplete block in buffer
         buffer = blocks.pop();
 
         for (const block of blocks) {
@@ -168,6 +210,7 @@ export default function App() {
       ]);
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -208,6 +251,7 @@ export default function App() {
   }
   return (
     <div className="app-container">
+    <div className={`sidebar-container ${isSidebarOpen ? 'open': 'closed'}`}>
       <Sidebar
         chats={chats}
         currentChatId={currentChatId}
@@ -215,11 +259,14 @@ export default function App() {
         onNewChat={handleNewChat}
         onRenameChat={handleRenameChat}
         onDeleteChat={handleDeleteChat}
-      />
+        />
+        </div>
       <ChatArea
         messages={messages}
         loading={loading}
         onSendMessage={handleSendMessage}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
       />
     </div>
   );

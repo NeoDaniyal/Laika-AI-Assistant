@@ -1,4 +1,4 @@
-
+/* Typing Indicator */
 .typing-indicator {
   display: inline-flex;
   align-items: center;
@@ -15,84 +15,35 @@
   animation: typing-bounce 1.2s infinite ease-in-out;
 }
 
-.typing-indicator span:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.3s;
-}
+.typing-indicator span:nth-child(1) { animation-delay: 0s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
 
 @keyframes typing-bounce {
   0%, 60%, 100% {
     transform: translateY(0);
     opacity: 0.35;
   }
-
   30% {
     transform: translateY(-5px);
     opacity: 1;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .typing-indicator span {
-    animation: none;
-    opacity: 0.7;
-  }
-}
-
-
+/* Message Wrapper Layout */
 .message-wrapper {
   display: flex;
   flex-direction: column;
   max-width: 80%;
-}
-
-/* Sources Footer */
-.sources-footer {
-  margin-top: 8px;
-  padding: 6px 10px;
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  font-size: 0.8rem;
-}
-
-.sources-label {
-  color: #a0a0b0;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.7px;
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-
-.sources-chips {
-  display: flex;
-  flex-wrap: wrap;
   gap: 6px;
 }
 
-.source-chip {
-  background-color: rgba(0, 188, 212, 0.15);
-  border: 1px solid rgba(0, 188, 212, 0.3);
-  color: #00bcd4;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 0.75rem;
-}
-
-/* Gemini-Style Full Copy Button */
+/* Gemini-Style Action Bar */
 .message-actions {
   display: flex;
-  justify-content: flex-start;
-  margin-top: 6px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .full-copy-btn {
@@ -101,12 +52,233 @@
   color: #9aa0a6;
   font-size: 0.8rem;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: background 0.2s, color 0.2s;
 }
 
 .full-copy-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
   color: #ffffff;
+}
+
+/* Gemini-Style Sources Pill Button */
+.gemini-sources-btn {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e8eaed;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gemini-sources-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.gemini-sparkle-svg{
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Source Preview Modal Overlay */
+.source-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.source-modal-card {
+  background-color: #1e1e24;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  color: #e0e0e0;
+  animation: modal-fade-in 0.2s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.source-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.source-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.source-modal-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.source-modal-close {
+  background: transparent;
+  border: none;
+  color: #9aa0a6;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.source-modal-close:hover {
+  color: #ffffff;
+}
+
+.source-modal-body {
+  font-size: 0.85rem;
+  color: #b0b0c0;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.source-modal-desc {
+  margin: 0;
+  word-break: break-word;
+}
+
+.source-modal-link-wrap {
+  margin-top: 10px;
+  word-break: break-all;
+}
+
+.source-modal-url-label {
+  font-size: 0.75rem;
+  color: #808090;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.source-modal-link {
+  color: #00bcd4;
+  text-decoration: none;
+}
+
+.source-modal-link:hover {
+  text-decoration: underline;
+}
+
+.source-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.source-visit-btn {
+  background-color: #00bcd4;
+  color: #000000;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.source-visit-btn:hover {
+  background-color: #00acc1;
+}
+
+.source-close-btn {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.source-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.message-bubble img{
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  margin-top: 10px;
+  object-fit: contain;
+}
+
+.message-bubble{
+  max-width: 100%;
+  overflow-x: hidden;
+  word-break: break-word;
+}
+
+.message-list{
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+.message-list::-webkit-scrollbar{
+  width: 6px;
+}
+
+.message-list::-webkit-scrollbar-track{
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.message-list::-webkit-scrollbar-thumb{
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover{
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.message-list{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255,255,255,0.02);
 }

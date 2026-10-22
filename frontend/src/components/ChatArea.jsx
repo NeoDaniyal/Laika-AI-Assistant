@@ -1,13 +1,37 @@
 import { useState } from "react";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
+import './ChatArea.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-
+const SUGGESTED_PROMPTS = [
+    {
+        icon: "🚀",
+        title: "Latest Space News",
+        prompt: "Search for the latest space exploration news"
+    },
+    {
+        icon: "💡",
+        title: "Brainstorm Ideas",
+        prompt: "What are some creative project ideas using Python and AI?"
+    },
+    {
+        icon: "🎨",
+        title: "Generate Image",
+        prompt: "Generate an image of a cybernetic wolf under a neon night sky"
+    },
+    {
+        icon: "📊",
+        title: "Analyze Data",
+        prompt: "How do I perform technical analysis on stock data using Python?"
+    },
+]
 export default function ChatArea({
     messages,
     loading,
-    onSendMessage
+    onSendMessage,
+    isSidebarOpen,
+    onToggleSidebar
 }) {
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
@@ -21,7 +45,6 @@ export default function ChatArea({
         setUploadStatus(`Uploading ${files.length} file(s)...`);
 
         const formData = new FormData();
-        // If your backend currently expects 'file' (singular), append them appropriately
         files.forEach((file) => {
             formData.append('files', file);
         });
@@ -40,7 +63,6 @@ export default function ChatArea({
 
             console.log("Upload response:", data);
 
-            // SAFELY handle response whether backend returns 'files' array or single 'chunks_created'
             let newFilesInfo = [];
             if (data.files && Array.isArray(data.files)) {
                 newFilesInfo = data.files.map(f => ({
@@ -48,7 +70,7 @@ export default function ChatArea({
                     chunks: f.chunks || 0
                 }));
             } else {
-                // Fallback for single file backend response
+
                 files.forEach(file => {
                     newFilesInfo.push({
                         name: file.name,
@@ -81,13 +103,60 @@ export default function ChatArea({
     return (
         <div className="chat-area">
             <header className="chat-header">
+                <div className="header-left">
+                    <button className="sidebar-toggle-btn"
+                        onClick={onToggleSidebar}
+                        type="button"
+                        title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                        </svg>                    </button>
+                </div>
                 <h3>Laika Chat Assistant</h3>
             </header>
+            {messages.length === 0 ? (
+                <div className="welcome-screen">
+                    <div className="welcome-heading">
+                        <h1 className="neon-gradient-text">Hello, Zara</h1>
+                        <h2 className="welcome-subtext">What's on your mind today?</h2>
+                    </div>
+                    <div className="prompt-cards-grid">
+                        {SUGGESTED_PROMPTS.map((item, idx) => (
+                            <button
+                                key={idx}
+                                className="prompt-card"
+                                onClick={() => handleSendWithAttachments(item.prompt)}
+                                type="button"
+                            >
+                                <span className="prompt-card-icon">{item.icon}</span>
+                                <div className="prompt-card-text">
+                                    <span className="prompt-card-title">{item.title}</span>
+                                    <span className="prompt-card-desc">{item.prompt}</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )
+                :
 
-            <MessageList
-                messages={messages}
-                loading={loading}
-            />
+                <MessageList
+                    messages={messages}
+                    loading={loading}
+                />
+            }
 
             <MessageInput
                 onSendMessage={handleSendWithAttachments}

@@ -37,6 +37,27 @@ body {
   flex-shrink: 0;
 }
 
+.sidebar-container {
+  width: 260px;
+  background-color: #131318;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  transition: width 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-container.closed{
+  width: 0;
+  transform: translateX(-100%);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  transition: margin 0.3s ease;
+}
 .new-chat-btn {
   background: transparent;
   border: 1px solid #334155;
@@ -108,16 +129,41 @@ body {
 }
 
 .chat-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background-color: #0f172a;
 }
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
+.sidebar-toggle-btn{
+  background: transparent;
+  border: none;
+  color: #9aa0a6;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-toggle-btn:hover{
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
 .chat-header h3 {
   font-size: 16px;
   font-weight: 600;
   color: #f8fafc;
 }
+
 
 .message-list {
   flex: 1;
@@ -371,3 +417,11 @@ body {
   color: #64748b;
   cursor: not-allowed;
 }
+
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Keeps the chat area fixed to the viewport height */
+  overflow: hidden; /* Prevents whole-page scrolling */
+}
+

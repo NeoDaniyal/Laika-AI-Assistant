@@ -38,13 +38,12 @@ def cosine_similarity(vec_a: List[float], vec_b: List[float])->float:
 
     return dot_product(vec_a, vec_b)/(mag_a*mag_b)
 
-async def search_similar_chunks(query: str, top_k: int=2, score_threshold: float=0.45, user_id: str= "default_user")-> List[Dict[str, Any]]:
+async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: float = 0.30, user_id: str = "default_user") -> List[Dict[str, Any]]:
     """
     Generates an embedding for the query, compares it against ALL stored chunk
     embeddings for a given user, ranks them by cosine similarity, and returns
     the Top-K highest scoring chunks.
     """
-
     query_vector = generate_embedding(query)
     stored_chunks = await chunks_collection.find({"user_id": user_id}).to_list(length=100000)
 
@@ -72,13 +71,14 @@ async def search_similar_chunks(query: str, top_k: int=2, score_threshold: float
                     "score": score
                 })
 
-            scored_chunks.sort(key=lambda x: x["score"], reverse=True)
+    # Sort all matching chunks by score descending AFTER the loop completes
+    scored_chunks.sort(key=lambda x: x["score"], reverse=True)
 
-            print(f"[RAG DEBUG] User query: {query}")
-            print(f"[RAG DEBUG] Stored chunks: {len(stored_chunks)}")
-            print(f"[RAG DEBUG] Retrieved chunks: {len(scored_chunks[:top_k])}")
+    print(f"[RAG DEBUG] User query: {query}")
+    print(f"[RAG DEBUG] Stored chunks: {len(stored_chunks)}")
+    print(f"[RAG DEBUG] Retrieved chunks: {len(scored_chunks[:top_k])}")
 
-            return scored_chunks[:top_k]
+    return scored_chunks[:top_k]
 
 
 def build_retrieval_context(retrieved_chunks: List[Dict[str, Any]]) -> str:
