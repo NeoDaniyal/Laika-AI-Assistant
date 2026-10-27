@@ -1,4 +1,35 @@
-/* Typing Indicator */
+/* Wrapper for streamed Markdown content */
+.markdown-stream {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Blinking streaming cursor */
+.typing-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 5px;
+  background-color: #4285f4;
+  border-radius: 50%;
+
+  vertical-align: middle;
+  animation: cursor-bounce 0.8s infinite ease-in-out;
+}
+
+@keyframes cursor-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50%{
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* Typing Indicator (Dots animation before streaming starts) */
 .typing-indicator {
   display: inline-flex;
   align-items: center;
@@ -15,12 +46,22 @@
   animation: typing-bounce 1.2s infinite ease-in-out;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: 0s; }
-.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
 
 @keyframes typing-bounce {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
     opacity: 0.35;
   }
@@ -30,12 +71,149 @@
   }
 }
 
-/* Message Wrapper Layout */
+.message-list {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.02);
+}
+
+.message-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.message-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.message-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
 .message-wrapper {
   display: flex;
   flex-direction: column;
-  max-width: 80%;
+  min-width: 0;
   gap: 6px;
+}
+.message-row.user .message-wrapper{
+  max-width: 70%;
+  align-items: flex-end;
+}
+
+.message-row.assistant .message-wrapper{
+  flex: 1;
+  max-width: 88%;
+  align-items: flex-start;
+}
+.message-row.user {
+  flex-direction: row-reverse;
+}
+
+.message-row.assistant .message-wrapper {
+  flex: 1;
+  max-width: 75%;
+  align-items: flex-start;
+}
+
+.message-row.user .message-bubble {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-radius: 16px 4px 16px 16px;
+}
+
+.message-row.assistant {
+  flex-direction: row;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  border-radius: 12px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* User Bubble Style */
+.message-row.user .message-bubble {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-radius: 16px 4px 16px 16px;
+}
+
+
+.message-row.assistant .message-bubble {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 4px 16px 16px 16px;
+  width: 100%; 
+}
+
+.assistant-bubble {
+  display: block;
+  max-width: 100%;
+}
+
+.markdown-content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.message-bubble img {
+  max-width: 100%;
+  height: auto;
+  max-height: 350px;
+  width: auto;
+  border-radius: 8px;
+  display: block;
+  margin-top: 10px;
+  object-fit: contain;
+}
+
+.markdown-content p {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  width: 100%;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+  display: inline;
+}
+
+.message-bubble pre {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Gemini-Style Action Bar */
@@ -83,7 +261,7 @@
   border-color: rgba(255, 255, 255, 0.25);
 }
 
-.gemini-sparkle-svg{
+.gemini-sparkle-svg {
   width: 14px;
   height: 14px;
   display: block;
@@ -231,54 +409,4 @@
 
 .source-close-btn:hover {
   background-color: rgba(255, 255, 255, 0.15);
-}
-
-.message-bubble img{
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-  display: block;
-  margin-top: 10px;
-  object-fit: contain;
-}
-
-.message-bubble{
-  max-width: 100%;
-  overflow-x: hidden;
-  word-break: break-word;
-}
-
-.message-list{
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  scroll-behavior: smooth;
-}
-
-.message-list::-webkit-scrollbar{
-  width: 6px;
-}
-
-.message-list::-webkit-scrollbar-track{
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 4px;
-}
-
-.message-list::-webkit-scrollbar-thumb{
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.message-list::-webkit-scrollbar-thumb:hover{
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.message-list{
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255,255,255,0.02);
 }

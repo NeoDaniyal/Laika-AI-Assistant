@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import './MessageInput.css';
 
 export default function MessageInput({ 
     onSendMessage, 
+    onStopGeneration,
     loading, 
     onFileUpload, 
     uploadStatus, 
@@ -11,15 +12,32 @@ export default function MessageInput({
 }) {
     const [input, setInput] = useState('');
     const fileInputRef = useRef(null);
+    const textareaRef = useRef(null);
 
+    useEffect(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
+      }
+    }, [input])
+    
     const handleSubmit = (e) => {
         e.preventDefault();
         if ((!input.trim() && attachedFiles.length === 0) || loading) return;
         
         onSendMessage(input);
         setInput('');
+        if(textareaRef.current){
+            textareaRef.current.style.height = 'auto';
+        }
     };
 
+    const handleKeyDown = (e) =>{
+        if(e.key === 'Enter' && !e.shiftKey){
+            e.preventDefault();
+            handleSubmit();
+        }
+    }
     const handleFileChange = (e) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
@@ -59,7 +77,7 @@ export default function MessageInput({
                     type="file"
                     ref={fileInputRef}
                     hidden
-                    multiple /* <-- Enables selecting multiple files */
+                    multiple
                     onChange={handleFileChange}
                     accept=".pdf,.txt,.docx,.png,.jpg,.jpeg"
                 />
@@ -74,22 +92,35 @@ export default function MessageInput({
                     +
                 </button>
 
-                <input 
-                    type="text"
+                <textarea
+                    ref={textareaRef}
                     className="message-input"
-                    placeholder="Ask a question about your documents..."
+                    placeholder="Ask Laika..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     disabled={loading}
+                    rows={1}
                 />
 
-                <button 
-                    type="submit" 
-                    className="send-btn" 
-                    disabled={(!input.trim() && attachedFiles.length === 0) || loading}
-                >
-                    Send
-                </button>
+                {loading ? (
+                    <button 
+                        type="button" 
+                        className="stop-btn" 
+                        onClick={onStopGeneration}
+                        title="Stop generating"
+                    >
+                        ■ Stop
+                    </button>
+                ) : (
+                    <button 
+                        type="submit" 
+                        className="send-btn" 
+                        disabled={(!input.trim() && attachedFiles.length === 0) || loading}
+                    >
+                        Send
+                    </button>
+                )}
             </form>
         </div>
     );

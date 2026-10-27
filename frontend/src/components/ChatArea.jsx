@@ -26,10 +26,13 @@ const SUGGESTED_PROMPTS = [
         prompt: "How do I perform technical analysis on stock data using Python?"
     },
 ]
+
 export default function ChatArea({
     messages,
     loading,
     onSendMessage,
+    onStopGeneration,
+    onEditMessage,
     isSidebarOpen,
     onToggleSidebar
 }) {
@@ -61,8 +64,6 @@ export default function ChatArea({
                 throw new Error(data.detail || 'Failed to upload documents');
             }
 
-            console.log("Upload response:", data);
-
             let newFilesInfo = [];
             if (data.files && Array.isArray(data.files)) {
                 newFilesInfo = data.files.map(f => ({
@@ -70,7 +71,6 @@ export default function ChatArea({
                     chunks: f.chunks || 0
                 }));
             } else {
-
                 files.forEach(file => {
                     newFilesInfo.push({
                         name: file.name,
@@ -79,7 +79,16 @@ export default function ChatArea({
                 });
             }
 
-            setAttachedFiles(prev => [...prev, ...newFilesInfo]);
+            setAttachedFiles((previous) => [
+                ...previous,
+                ...data.files.map((file) => ({
+                    name: file.name,
+                    url: file.url,
+                    filename: file.filename,
+                    type: file.type,
+                    chunks: file.chunks,
+                })),
+            ]);
             setUploadStatus(`📎 Successfully uploaded file(s).`);
 
         } catch (error) {
@@ -122,14 +131,17 @@ export default function ChatArea({
                         >
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <line x1="9" y1="3" x2="9" y2="21"></line>
-                        </svg>                    </button>
+                        </svg>
+                    </button>
                 </div>
                 <h3>Laika Chat Assistant</h3>
             </header>
+
             {messages.length === 0 ? (
                 <div className="welcome-screen">
                     <div className="welcome-heading">
-                        <h1 className="neon-gradient-text">Hello, Zara</h1>
+                        {/* Updated greeting with your correct name */}
+                        <h1 className="neon-gradient-text">Hello, Monatasha Zara</h1>
                         <h2 className="welcome-subtext">What's on your mind today?</h2>
                     </div>
                     <div className="prompt-cards-grid">
@@ -149,17 +161,17 @@ export default function ChatArea({
                         ))}
                     </div>
                 </div>
-            )
-                :
-
+            ) : (
                 <MessageList
                     messages={messages}
                     loading={loading}
+                    onEditMessage={onEditMessage}
                 />
-            }
+            )}
 
             <MessageInput
                 onSendMessage={handleSendWithAttachments}
+                onStopGeneration={onStopGeneration}
                 loading={loading || uploading}
                 onFileUpload={handleFileUploads}
                 uploadStatus={uploadStatus}

@@ -2,6 +2,8 @@ import os
 import json
 import shutil
 import traceback
+import uuid
+from pathlib import Path
 from typing import List, Optional
 from bson import ObjectId
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
@@ -28,14 +30,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Directories and Static Mounts
 IMAGE_DIR = "generated_images"
+UPLOAD_DIR = "uploads"
+VIDEO_DIR = "generated_videos"
 os.makedirs(IMAGE_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(VIDEO_DIR, exist_ok=True)
 
 app.mount("/generated_images", StaticFiles(directory=IMAGE_DIR), name="generated_images")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+app.mount("/generated_videos", StaticFiles(directory=VIDEO_DIR), name="generated_videos")
+
 
 class MessageItem(BaseModel):
     role: str
     content: str
+    images: Optional[List[dict]] = None
 
 
 class ChatRequest(BaseModel):
@@ -65,6 +76,7 @@ async def chat_stream(request: ChatRequest):
             }
             result = await chats_collection.insert_one(new_chat)
             chat_id = str(result.inserted_id)
+
         # 2. Extract system message string
         sys_str = build_system_message()
         full_history = [{"role": "system", "content": sys_str}] + history
@@ -94,6 +106,7 @@ async def chat_stream(request: ChatRequest):
             full_response = ""
 
             yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
+            
             # Stream LLM generated tokens
             try:
                 async for token in ask_llm_stream(truncated_history):
@@ -187,14 +200,12 @@ async def get_chat_history(chat_id: str):
         cleaned_messages.append({
             "role": msg.get("role", "user"),
             "content": msg.get("content", ""),
-            "sources": msg.get("sources", [])
+            "sources": msg.get("sources", []),
+            "images": msg.get("images", [])
         })
 
     return {"id": str(chat["_id"]), "messages": cleaned_messages}
 
-
-UPLOAD_DIR = "uploaded_files"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @app.post("/upload")
@@ -205,41 +216,72 @@ async def upload_file(
     try:
         total_chunks = 0
         uploaded_summary = []
+
+        allowed_extensions = {
+            "pdf", "txt", "docx", "csv", "png", "jpg", "jpeg", "webp"
+        }
+
+        image_extensions = {"png", "jpg", "jpeg", "webp"}
+
         for file in files:
-            file_path = os.path.join(UPLOAD_DIR, file.filename)
+            original_name = Path(file.filename or "upload").name
+            ext = Path(original_name).suffix.lower().lstrip(".")
 
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            if ext not in allowed_extensions:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file type: {ext or 'unknown'}"
+                )
 
-        ext = file.filename.split(".")[-1].lower() if "." in file.filename else "txt"
+            # Unique filename prevents overwriting existing uploads.
+            saved_name = f"{uuid.uuid4().hex}_{original_name}"
+            file_path = os.path.join(UPLOAD_DIR, saved_name)
 
-        print(f"📥 Received file for ingestion: {file.filename} (Type: {ext})")
-        # Ingest the uploaded document into the RAG vector store
-        ingest_result = await ingest_document(
-            file_path=file_path,
-            filename=file.filename,
-            file_type=ext,
-            user_id=user_id
-        )
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
 
-        if os.path.exists(file_path):
-            os.remove(file_path)
+            public_url = f"http://127.0.0.1:8000/uploads/{saved_name}"
 
-        chunks = ingest_result.get("chunks_created", 0)
-        total_chunks += chunks
-        uploaded_summary.append({"name": file.filename, "chunks": chunks})
+            chunks = 0
+
+            if ext in {"pdf", "txt", "docx", "csv"}:
+                ingest_result = await ingest_document(
+                    file_path=file_path,
+                    filename=original_name,
+                    file_type=ext,
+                    user_id=user_id
+                )
+                chunks = ingest_result.get("chunks_created", 0)
+                total_chunks += chunks
+
+            uploaded_summary.append({
+                "name": original_name,
+                "url": public_url,
+                "filename": saved_name,
+                "type": (
+                    "image" if ext in image_extensions else "document"
+                ),
+                "chunks": chunks
+            })
 
         return {
-            "message": f"Successfully uploaded and ingested {len(files)} file(s).",
+            "message": f"Successfully uploaded {len(files)} file(s).",
             "files": uploaded_summary,
             "total_chunks": total_chunks
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error in upload_files: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 class RenameChatRequest(BaseModel):
     title: str
+
 
 @app.patch("/chats/{chat_id}")
 async def rename_chat(chat_id: str, request: RenameChatRequest):
@@ -256,6 +298,7 @@ async def rename_chat(chat_id: str, request: RenameChatRequest):
 
     return {"message": "Chat renamed successfully"}
 
+
 @app.delete("/chats/{chat_id}")
 async def delete_chat(chat_id: str):
     if not ObjectId.is_valid(chat_id):
@@ -267,4 +310,3 @@ async def delete_chat(chat_id: str):
         raise HTTPException(status_code=404, detail="Chat not found")
 
     return {"message": "Chat deleted successfully"}
-    

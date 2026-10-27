@@ -1,10 +1,16 @@
 .chat-area {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    background-color: #0e0e12;
-    position: relative;
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100vh;
+
+  overflow: hidden;
+  background-color: #0e0e12;
+
+  position: relative;
 }
 
 .chat-header {
@@ -120,4 +126,36 @@
     .welcome-subtext{
         font-size:  1.3rem;
     }
+}
+
+/* Force message rows to take full width */
+.message-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Prevent assistant wrappers from shrinking during token streams */
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+}
+
+/* Lock message bubbles to full width without reflow jitter */
+.message-bubble {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+.assistant-bubble {
+    width: 100% !important;
+    display: block !important;
 }

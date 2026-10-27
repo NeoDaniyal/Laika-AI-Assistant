@@ -46,7 +46,7 @@ body {
   flex-shrink: 0;
 }
 
-.sidebar-container.closed{
+.sidebar-container.closed {
   width: 0;
   transform: translateX(-100%);
 }
@@ -58,6 +58,7 @@ body {
   overflow: hidden;
   transition: margin 0.3s ease;
 }
+
 .new-chat-btn {
   background: transparent;
   border: 1px solid #334155;
@@ -123,7 +124,8 @@ body {
   flex-direction: column;
   flex: 1;
   height: 100vh;
-  min-width: 0; /* Prevents horizontal flex overflow */
+  min-width: 0;
+  /* Prevents horizontal flex overflow */
   background-color: #0f172a;
   color: #f8fafc;
 }
@@ -135,13 +137,14 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background-color: #0f172a;
 }
+
 .header-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.sidebar-toggle-btn{
+.sidebar-toggle-btn {
   background: transparent;
   border: none;
   color: #9aa0a6;
@@ -154,10 +157,12 @@ body {
   align-items: center;
   justify-content: center;
 }
-.sidebar-toggle-btn:hover{
+
+.sidebar-toggle-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
+
 .chat-header h3 {
   font-size: 16px;
   font-weight: 600;
@@ -165,28 +170,25 @@ body {
 }
 
 
-.message-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  scroll-behavior: smooth;
-}
-
 /* Message Rows */
 .message-row {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  max-width: 85%;
-  min-width: 0;
+  max-width: 900px;
+  min-width: 0 auto;
 }
 
 .message-row.assistant {
-  align-self: flex-start;
   flex-direction: row;
+}
+
+.message-row.user {
+  flex-direction: row-reverse;
+}
+
+.message-row.assistant .message-wrapper {
+  align-items: flex-start;
 }
 
 .message-row.assistant .message-bubble {
@@ -222,11 +224,11 @@ body {
 }
 
 .message-bubble {
+  width: 100%;
+  box-sizing: border-box;
   padding: 14px 18px;
   font-size: 15px;
   line-height: 1.6;
-  min-width: 0;
-  max-width: 100%;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
@@ -252,9 +254,17 @@ body {
   line-height: 1.3;
 }
 
-.message-bubble h1 { font-size: 20px; }
-.message-bubble h2 { font-size: 18px; }
-.message-bubble h3 { font-size: 16px; }
+.message-bubble h1 {
+  font-size: 20px;
+}
+
+.message-bubble h2 {
+  font-size: 18px;
+}
+
+.message-bubble h3 {
+  font-size: 16px;
+}
 
 .message-bubble p {
   margin-bottom: 12px;
@@ -315,7 +325,8 @@ body {
   overflow: hidden;
   border: 1px solid #334155;
   background-color: #1e293b;
-  white-space: normal !important; /* Fixes token vertical stacking */
+  white-space: normal !important;
+  /* Fixes token vertical stacking */
 }
 
 .code-block-header {
@@ -421,7 +432,8 @@ body {
 .chat-area {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Keeps the chat area fixed to the viewport height */
-  overflow: hidden; /* Prevents whole-page scrolling */
+  height: 100vh;
+  /* Keeps the chat area fixed to the viewport height */
+  overflow: hidden;
+  /* Prevents whole-page scrolling */
 }
-

@@ -2,6 +2,7 @@ import json
 import re
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 from openai import AsyncOpenAI
 from typing import AsyncGenerator, Dict, Any, List
 from backend.tools import registry
@@ -87,7 +88,115 @@ async def ask_llm_stream(messages: List[Dict[str, str]]) -> AsyncGenerator[str, 
             except Exception as e:
                 yield f"\n[Tool Execution Error: {str(e)}]\n"
 
-    # 3. Check for Image Generation Tool Trigger
+    video_patterns = [
+        r"\bgenerate\s+(?:a\s+)?video\b",
+        r"\bcreate\s+(?:a\s+)?video\b",
+        r"\bmake\s+(?:a\s+)?video\b",
+        r"\bvideo\s+of\b",
+        r"\btext\s+to\s+video\b",
+    ]
+
+    is_video_query = any(re.search(pattern, last_user_msg, re.IGNORECASE) for pattern in video_patterns)
+
+    if is_video_query:
+        clean_prompt = re.sub(
+           r"^(?:please\s+)?(?:generate|create|make)\s+"
+            r"(?:a\s+)?video(?:\s+of|\s+showing|\s+about)?\s*",
+            "",
+            last_user_msg,
+            flags=re.IGNORECASE
+        ).strip()
+
+        if not clean_prompt:
+            yield "please describe the video you want me to generate."
+            return 
+        duration_match = re.search(
+            r"\bfor\s+(\d+)\s+seconds?\b",
+            clean_prompt,
+            re.IGNORECASE,
+        )
+
+        tools_args = {"prompt": clean_prompt}
+        if duration_match:
+            tool_args["duration"] = int(duration_match.group(1))
+            clean_prompt = re.sub(
+                r"\s*for\s+\d+\s+seconds?b","",clean_prompt, flags=re.IGNORECASE
+            ).strip()
+            tools_args["prompt"] = clean_prompt
+
+        yield (
+            f"*(Executing tool `video_generation` with arguments "
+            f"`{json.dumps(tools_args)}`)*\n\n").replace("* (","*(").replace(") *",")*")
+
+        try:
+            result_msg = registry.execute("video_generation", tools_args,)
+
+            if "saved at: " in result_msg.lower():
+                raw_path = result_msg.split("saved at: ", 1)[1].strip()
+                filename = Path(raw_path.replace("\\", "/")).name
+
+                video_url = (f"http://localhost:8000/generated_videos/{filename}")
+                yield ("🎬 Your videos has been generated!\n\n"
+                       f"[Watch generated video]({video_url})")
+            else:
+                yield f"🎬 {result_msg}"
+                return
+            
+        except Exception as e:
+            yield f"\n[Video Generated Error: {str(e)}]\n"
+            return
+        # end try
+    # 3. Check for Image-to-Image Refinement Trigger FIRST (before generation)
+    refine_keywords = ["refine image", "modify image", "change image", "transform image", "transform this image", "make it look like"]
+    is_refine_query = any(kw in last_user_msg.lower() for kw in refine_keywords)
+
+    if is_refine_query:
+        clean_prompt = re.sub(
+            r"^(refine image|modify image|change image|transform this image|transform image|make it look like)\s*",
+            "",
+            last_user_msg,
+            flags=re.IGNORECASE,
+        ).strip()
+
+        user_attached_image = None
+        for msg in reversed(messages):
+            if msg.get("images") and len(msg["images"]) > 0:
+                user_attached_image = msg["images"][0].get("url")
+                break
+        
+        if not user_attached_image:
+            yield "Please attach or upload an image you want me to transform or edit first."
+            return
+
+        tool_args = {
+            "image_url": user_attached_image,
+            "prompt": clean_prompt or last_user_msg
+        }
+        yield f"*(Executing tool `image_to_image` with arguments `{json.dumps(tool_args)}`)*\n\n"
+
+        try:
+            result_msg = registry.execute("image_to_image", tool_args)
+
+            # Extract the saved image path and normalize securely
+            if "saved at: " in result_msg:
+                raw_path = result_msg.split("saved at: ", 1)[1].strip()
+                filename = Path(raw_path.replace("\\", "/")).name
+                image_url = f"http://localhost:8000/generated_images/{filename}"
+
+                yield (
+                    "🎨 Here is your generated image:\n\n"
+                    f"![Generated image]({image_url})"
+                )
+            else:
+                yield f"🎨 {result_msg}"
+
+            return
+
+        except Exception as e:
+            yield f"\n[Image Refinement Error: {str(e)}]\n"
+            return
+
+    # 4. Check for Image Generation Tool Trigger
     image_keywords = ["generate an image", "create an image", "draw", "generate image", "image of"]
     is_image_query = any(kw in last_user_msg.lower() for kw in image_keywords)
 
@@ -109,8 +218,8 @@ async def ask_llm_stream(messages: List[Dict[str, str]]) -> AsyncGenerator[str, 
             
             if "saved at: " in result_msg:
                 raw_path = result_msg.split("saved at: ")[-1].strip()
-                web_path = raw_path.replace("\\", "/")
-                image_url = f"http://localhost:8000/{web_path}"
+                filename = Path(raw_path.replace("\\", "/")).name
+                image_url = f"http://localhost:8000/generated_images/{filename}"
                 
                 yield f"🎨 Here is your generated image:\n\n![{clean_prompt}]({image_url})"
             else:
@@ -120,10 +229,9 @@ async def ask_llm_stream(messages: List[Dict[str, str]]) -> AsyncGenerator[str, 
             yield f"\n[Image Generation Error: {str(e)}]\n"
             return
 
-
     source_list = []
     
-    # 4. Search intent detection and result preparation
+    # 5. Search intent detection and result preparation
     lower_msg = last_user_msg.lower().strip()
 
     news_phrases = [
@@ -360,7 +468,7 @@ async def ask_llm_stream(messages: List[Dict[str, str]]) -> AsyncGenerator[str, 
             return
 
 
-    # 5. Standard conversational streaming through the actual LLM
+    # 6. Standard conversational streaming through the actual LLM
     try:
         response = await client.chat.completions.create(
             model="mercury-3",
