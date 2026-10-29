@@ -64,19 +64,8 @@ export default function ChatArea({
                 throw new Error(data.detail || 'Failed to upload documents');
             }
 
-            let newFilesInfo = [];
-            if (data.files && Array.isArray(data.files)) {
-                newFilesInfo = data.files.map(f => ({
-                    name: f.name,
-                    chunks: f.chunks || 0
-                }));
-            } else {
-                files.forEach(file => {
-                    newFilesInfo.push({
-                        name: file.name,
-                        chunks: data.chunks_created || 0
-                    });
-                });
+            if (!Array.isArray(data.files)) {
+                throw new Error("The server response does not contain a valid files array.");
             }
 
             setAttachedFiles((previous) => [
@@ -86,10 +75,12 @@ export default function ChatArea({
                     url: file.url,
                     filename: file.filename,
                     type: file.type,
-                    chunks: file.chunks,
+                    chunks: file.chunks || 0,
+                    document_id: file.document_id || null,
                 })),
             ]);
-            setUploadStatus(`📎 Successfully uploaded file(s).`);
+
+            setUploadStatus("📎 Successfully uploaded file(s).");
 
         } catch (error) {
             console.error('File Upload Error:', error);

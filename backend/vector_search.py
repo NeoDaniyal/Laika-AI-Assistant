@@ -11,6 +11,7 @@ import math
 from typing import List, Dict, Any
 from backend.embeddings import generate_embedding
 from backend.database import db
+from bson import ObjectId
 
 chunks_collection = db["rag_chunks"]
 
@@ -38,14 +39,32 @@ def cosine_similarity(vec_a: List[float], vec_b: List[float])->float:
 
     return dot_product(vec_a, vec_b)/(mag_a*mag_b)
 
-async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: float = 0.30, user_id: str = "default_user") -> List[Dict[str, Any]]:
+
+async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: float = 0.20, user_id: str = "default_user", document_ids: List[str] | None = None) -> List[Dict[str, Any]]:
     """
-    Generates an embedding for the query, compares it against ALL stored chunk
-    embeddings for a given user, ranks them by cosine similarity, and returns
+    Generates an embedding for the query, compares it against stored chunk
+    embeddings for a given user (optionally filtered by document IDs), ranks them by cosine similarity, and returns
     the Top-K highest scoring chunks.
     """
     query_vector = generate_embedding(query)
-    stored_chunks = await chunks_collection.find({"user_id": user_id}).to_list(length=100000)
+
+    db_query = {"user_id": user_id}
+
+    # Attached-document mode: restrict the search to selected documents if provided.
+    if document_ids:
+        try:
+            object_ids = [ObjectId(doc_id) for doc_id in document_ids]
+            db_query["document_id"] = {"$in": object_ids}
+        except Exception as e:
+            print(f"[RAG] Invalid document ID: {e}")
+            return []
+
+    # Fetch stored chunks based on query rules
+    stored_chunks = await chunks_collection.find(db_query).to_list(length=100000)
+
+    print(f"[RAG DEBUG] MongoDB filter: {db_query}")
+    print(f"[RAG DEBUG] Matched chunks: {len(stored_chunks)}")
+    print("[RAG DEBUG] Matched filenames:",sorted({chunk.get("filename", "unknown") for chunk in stored_chunks}))
 
     scored_chunks = []
 
@@ -65,7 +84,7 @@ async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: flo
             if score >= score_threshold:
                 scored_chunks.append({
                     "chunk_id": str(chunk["_id"]),
-                    "chunk_index": chunk["chunk_index"],
+                    "chunk_index": chunk.get("chunk_index", 0),
                     "filename": chunk.get("filename", "unknown"),
                     "text": chunk["text"],
                     "score": score
@@ -73,12 +92,13 @@ async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: flo
 
     # Sort all matching chunks by score descending AFTER the loop completes
     scored_chunks.sort(key=lambda x: x["score"], reverse=True)
+    results = scored_chunks[:int(top_k)]
 
     print(f"[RAG DEBUG] User query: {query}")
     print(f"[RAG DEBUG] Stored chunks: {len(stored_chunks)}")
-    print(f"[RAG DEBUG] Retrieved chunks: {len(scored_chunks[:top_k])}")
+    print(f"[RAG DEBUG] Retrieved chunks: {len(results)}")
 
-    return scored_chunks[:top_k]
+    return results
 
 
 def build_retrieval_context(retrieved_chunks: List[Dict[str, Any]]) -> str:

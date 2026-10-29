@@ -6,6 +6,7 @@ and Vector Embedding Storage.
 """
 
 import re
+import csv
 from typing import List, Dict, Any
 from datetime import datetime
 import PyPDF2
@@ -39,6 +40,10 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
     elif file_type in ["docx", "doc"]:
         doc = docx.Document(file_path)
         return "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+    elif file_type == "csv":
+        with open(file_path, "r", encoding="utf8-sig", errors="ignore", newline="") as f:
+            rows = csv.reader(f)
+            return "\n".join(", ".join(cell for cell in row) for row in rows)
 
     else:
         raise ValueError(f"Unsupported file format: {file_type}")

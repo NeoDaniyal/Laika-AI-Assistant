@@ -7,6 +7,11 @@ env/
 venv/
 .env
 
+generated_images
+generated_videos
+uploads
+uploaded_files
+
 # Node / Frontend
 node_modules/
 dist/

@@ -25,7 +25,7 @@ export default function MessageInput({
         e.preventDefault();
         if ((!input.trim() && attachedFiles.length === 0) || loading) return;
         
-        onSendMessage(input);
+        onSendMessage(input, attachedFiles);
         setInput('');
         if(textareaRef.current){
             textareaRef.current.style.height = 'auto';
@@ -79,7 +79,7 @@ export default function MessageInput({
                     hidden
                     multiple
                     onChange={handleFileChange}
-                    accept=".pdf,.txt,.docx,.png,.jpg,.jpeg"
+                    accept=".pdf,.txt,.docx,.csv,.png,.jpg,.jpeg"
                 />
                 
                 <button 

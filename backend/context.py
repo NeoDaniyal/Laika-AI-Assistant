@@ -40,14 +40,36 @@ async def build_context(
         user_query=last_user_prompt, 
         user_id=user_id
     )
-
     # 2. Retrieve Top-K RAG chunks if enabled and not directly provided
+    document_ids = []
+    for msg in reversed(chat_messages):
+        if msg.get("role") == "user":
+            document_ids = msg.get("document_ids") or []
+            break
+    if not document_ids and last_user_prompt:
+        is_summary_query = any(kw in last_user_prompt.lower() for kw in ["summarize", "summary", "overview", "what is this document about"])
+        if is_summary_query:
+            from backend.rag import document_collection # adjust import if collection is defined elsewhere
+            latest_doc = await document_collection.find_one({"user_id": user_id}, sort=[("uploaded_at", -1)])
+            if latest_doc:
+                document_ids = [str(latest_doc["_id"])]
+                print(f"[RAG DEBUG] Auto-targeted latest document ID: {document_ids[0]} ({latest_doc.get('filename')})")
+
+    print(f"[RAG DEBUG] Last user prompt: {last_user_prompt}")
+    print(f"[RAG DEBUG] Selected document IDs: {document_ids}")
+
     if enable_rag and retrieved_chunks is None and last_user_prompt:
+        is_summary_query = any(kw in last_user_prompt.lower() for kw in ["summarize", "summary", "overview", "what is this document about"])
+
+        effective_top_k = 10 if (is_summary_query and document_ids) else 2
+        effective_threshold = 0.05 if is_summary_query else score_threshold
+        
         retrieved_chunks = await search_similar_chunks(
             query=last_user_prompt,
-            top_k=2,
+            top_k=effective_top_k,
             user_id=user_id,
-            score_threshold=score_threshold
+            score_threshold=effective_threshold,
+            document_ids=document_ids
         )
 
     final_messages = []

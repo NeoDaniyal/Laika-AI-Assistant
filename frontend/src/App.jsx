@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import './App.css';
-import js from '@eslint/js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
@@ -95,12 +94,15 @@ export default function App() {
         name: file.name
       }));
 
+    // Only document with valid id can use
+    const documentIds = attachments.filter((file) => file.type === "document" && file.document_id).map((file) =>file.document_id)
     const updatedMessages = [
       ...messages,
       { 
         role: 'user', 
         content: userMessage, 
-        images: imageAttachments.length > 0 ? imageAttachments : undefined 
+        images: imageAttachments.length > 0 ? imageAttachments : undefined,
+        document_id: documentIds.length > 0 ?documentIds : undefined 
       },
     ];
 
@@ -236,19 +238,19 @@ export default function App() {
       {role: 'user', content: newContent}
     ];
     setMessages(updatedMessages);
-
+    const documentIds = messages[index]?.document_id || []
     setTimeout(() => {
-      handleSendMessageWithHistory(newContent, truncatedHistory);
+      handleSendMessageWithHistory(newContent, truncatedHistory, documentIds);
     }, 10);
   };
 
-  const handleSendMessageWithHistory = async (userMessage, currentHistory) =>{
+  const handleSendMessageWithHistory = async (userMessage, currentHistory, documentIds = []) =>{
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     const updatedMessages = [
       ...currentHistory,
-      {role: 'user', content: userMessage},
+      {role: 'user', content: userMessage, document_id: documentIds.length>0?documentIds: undefined},
     ];
 
     setMessages([

@@ -9,7 +9,8 @@ from bson import ObjectId
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
+from pymongo.errors import DuplicateKeyError
 from datetime import datetime
 
 from backend.database import chats_collection
@@ -18,6 +19,7 @@ from backend.prompts import build_system_message
 from backend.context import build_context
 from backend.memory import extract_and_store_memories 
 from backend.rag import ingest_document
+from backend.auth import (users_collection, hash_password, verify_password, create_access_token)
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="AI Chatbot Backend")
@@ -47,6 +49,7 @@ class MessageItem(BaseModel):
     role: str
     content: str
     images: Optional[List[dict]] = None
+    document_ids: Optional[List[str]] =None
 
 
 class ChatRequest(BaseModel):
@@ -54,6 +57,8 @@ class ChatRequest(BaseModel):
     user_id: Optional[str] = "default_user"
     messages: List[MessageItem]
 
+class RegistryRequest(BaseModel):
+    email: EmailStr
 
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
@@ -201,7 +206,8 @@ async def get_chat_history(chat_id: str):
             "role": msg.get("role", "user"),
             "content": msg.get("content", ""),
             "sources": msg.get("sources", []),
-            "images": msg.get("images", [])
+            "images": msg.get("images", []),
+            "document_ids": msg.get("document_ids", [])
         })
 
     return {"id": str(chat["_id"]), "messages": cleaned_messages}
@@ -216,6 +222,7 @@ async def upload_file(
     try:
         total_chunks = 0
         uploaded_summary = []
+        chunks= 0
 
         allowed_extensions = {
             "pdf", "txt", "docx", "csv", "png", "jpg", "jpeg", "webp"
@@ -224,6 +231,7 @@ async def upload_file(
         image_extensions = {"png", "jpg", "jpeg", "webp"}
 
         for file in files:
+            document_id = None
             original_name = Path(file.filename or "upload").name
             ext = Path(original_name).suffix.lower().lstrip(".")
 
@@ -251,13 +259,15 @@ async def upload_file(
                     file_type=ext,
                     user_id=user_id
                 )
-                chunks = ingest_result.get("chunks_created", 0)
+                document_id = ingest_result.get("document_id")
+                chunks = ingest_result.get("total_chunks", 0)
                 total_chunks += chunks
 
             uploaded_summary.append({
                 "name": original_name,
                 "url": public_url,
                 "filename": saved_name,
+                "document_id": document_id,
                 "type": (
                     "image" if ext in image_extensions else "document"
                 ),
