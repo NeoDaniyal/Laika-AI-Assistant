@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
@@ -19,7 +19,7 @@ from backend.prompts import build_system_message
 from backend.context import build_context
 from backend.memory import extract_and_store_memories 
 from backend.rag import ingest_document
-from backend.auth import (users_collection, hash_password, verify_password, create_access_token)
+from backend.auth import (users_collection, hash_password, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user)
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="AI Chatbot Backend")
@@ -59,6 +59,11 @@ class ChatRequest(BaseModel):
 
 class RegistryRequest(BaseModel):
     email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
 
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
@@ -320,3 +325,59 @@ async def delete_chat(chat_id: str):
         raise HTTPException(status_code=404, detail="Chat not found")
 
     return {"message": "Chat deleted successfully"}
+
+
+@app.post("/auth/registry", status_code=201)
+async def register(request: RegistryRequest):
+    email = str(request.email).strip().lower()
+
+    await users_collection.create_index("email", unique=True)
+
+    user = {
+        "email": email,
+        "password_hash": hash_password(request.password),
+        "create_at": datetime.utcnow(),
+    }
+
+    try:
+        result = await users_collection.insert_one(user)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=409,
+            detail="An accound with this email already exists.",
+        )
+    return {
+        "message": "Account created successfully.",
+        "user": {
+            "id": str(result.inserted_id),
+            "email": email,
+        }
+    }
+
+@app.post("/auth/login")
+async def login(request: LoginRequest):
+    email = str(request.email).strip().lower()
+
+    user = await users_collection.find_one({"email": email})
+
+    if(user is None or not verify_password(request.password, user.get("password_hash", ""))):
+        raise HTTPException(status_code=401, detail="Invalid email or password.", headers={"WWW-Authenticate": "Bearer"})
+
+    token = create_access_token(str(user["_id"]))
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user": {
+            "id": str(user["_id"]),
+            "email": user["email"],
+        }
+    }
+
+@app.get("/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "id": str(current_user["_id"]),
+        "email": current_user["email"]
+    }
