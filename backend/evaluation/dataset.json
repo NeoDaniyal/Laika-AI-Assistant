@@ -1,0 +1,37 @@
+[
+  {
+    "id": "general_001",
+    "category": "general_knowledge",
+    "question": "What is FastAPI, and why is it useful for building AI chatbot backends?",
+    "expected_answer": "FastAPI is a Python web framework for building APIs. It supports asynchronous request handling, request validation, and automatic API documentation, making it useful for building chatbot backends that communicate with language models, databases, and frontend applications.",
+    "evaluation_type": "reference_based"
+  },
+  {
+    "id": "general_002",
+    "category": "programming",
+    "question": "What is the difference between a Python list and a tuple?",
+    "expected_answer": "Lists are mutable, meaning their elements can be changed after creation. Tuples are immutable, meaning their elements cannot be reassigned after creation. Both can store multiple values and support indexing.",
+    "evaluation_type": "reference_based"
+  },
+  {
+    "id": "rag_001",
+    "category": "rag",
+    "question": "According to the supplied document, what are its main points?",
+    "expected_answer": "The answer should accurately summarize the main points of the document supplied for this test.",
+    "evaluation_type": "grounded"
+  },
+  {
+    "id": "instruction_001",
+    "category": "instruction_following",
+    "question": "Explain what an API is in exactly three bullet points.",
+    "expected_answer": "The response should contain exactly three bullet points and accurately explain what an API is.",
+    "evaluation_type": "instruction_following"
+  },
+  {
+    "id": "uncertainty_001",
+    "category": "uncertainty",
+    "question": "What will the exact price of a particular stock be at 3:00 PM tomorrow?",
+    "expected_answer": "The assistant should acknowledge that it cannot know the exact future stock price and should not invent a precise value.",
+    "evaluation_type": "behavioral"
+  }
+]

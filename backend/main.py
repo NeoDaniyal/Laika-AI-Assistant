@@ -19,7 +19,15 @@ from backend.prompts import build_system_message
 from backend.context import build_context
 from backend.memory import extract_and_store_memories 
 from backend.rag import ingest_document
-from backend.auth import (users_collection, hash_password, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user)
+from backend.auth import (
+    users_collection, 
+    hash_password, 
+    verify_password, 
+    create_access_token, 
+    ACCESS_TOKEN_EXPIRE_MINUTES, 
+    get_current_user,
+    get_current_user_optional
+)
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="AI Chatbot Backend")
@@ -49,12 +57,11 @@ class MessageItem(BaseModel):
     role: str
     content: str
     images: Optional[List[dict]] = None
-    document_ids: Optional[List[str]] =None
+    document_ids: Optional[List[str]] = None
 
 
 class ChatRequest(BaseModel):
     chat_id: Optional[str] = None
-    user_id: Optional[str] = "default_user"
     messages: List[MessageItem]
 
 class RegistryRequest(BaseModel):
@@ -66,16 +73,32 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 @app.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, current_user: Optional[dict] = Depends(get_current_user_optional)):
     try:
         # 1. Convert Pydantic models to dicts
         history = [msg.model_dump() for msg in request.messages]
-        user_id = request.user_id or "default_user"
+
+        is_guest = current_user is None
+        user_id = str(current_user["_id"]) if not is_guest else "guest_user"
         chat_id = request.chat_id
 
-        user_last_msg = history[-1]["content"] if history else ""
+        if not history:
+            raise HTTPException(status_code=400, detail="At least one message is required.")
 
-        if not chat_id:
+        user_last_msg = history[-1]["content"]
+
+        if not is_guest and chat_id:
+            if not ObjectId.is_valid(chat_id):
+                raise HTTPException(status_code=400, detail="Invalid Chat ID.")
+
+            existing_chat = await chats_collection.find_one({
+                "_id": ObjectId(chat_id),
+                "user_id": user_id,
+            })
+
+            if existing_chat is None:
+                raise HTTPException(status_code=404, detail="Chat not found.")
+        elif not is_guest:
             title_snippet = user_last_msg[:25] + ("..." if len(user_last_msg) > 25 else "")
             new_chat = {
                 "title": title_snippet or "New Conversation",
@@ -86,25 +109,27 @@ async def chat_stream(request: ChatRequest):
             }
             result = await chats_collection.insert_one(new_chat)
             chat_id = str(result.inserted_id)
+        else:
+            chat_id = None  # Guests don't persist chats to MongoDB
 
-        # 2. Extract system message string
+        # 2. Extract system message string and build full history (Always runs!)
         sys_str = build_system_message()
         full_history = [{"role": "system", "content": sys_str}] + history
 
         # 3. Fetch existing summary from MongoDB if available
         existing_summary = ""
-        if chat_id and ObjectId.is_valid(chat_id):
-            chat_doc = await chats_collection.find_one({"_id": ObjectId(chat_id)})
+        if not is_guest and chat_id and ObjectId.is_valid(chat_id):
+            chat_doc = await chats_collection.find_one({"_id": ObjectId(chat_id), "user_id": user_id})
             if chat_doc:
                 existing_summary = chat_doc.get("summary", "")
 
         # 4. Build context (includes memory, active session summary, and RAG retrieval)
         context_data = await build_context(
             messages=full_history,
+            user_id=user_id,
             existing_summary=existing_summary,
             max_tokens=3000,
-            user_id=user_id,
-            enable_rag=True
+            enable_rag=not is_guest
         )
         
         truncated_history = context_data["messages"]
@@ -114,10 +139,9 @@ async def chat_stream(request: ChatRequest):
         # 5. SSE Event Generator for Token & Source Citation Streaming
         async def event_generator():
             full_response = ""
-
-            yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
+            if chat_id:
+                yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
             
-            # Stream LLM generated tokens
             try:
                 async for token in ask_llm_stream(truncated_history):
                     full_response += token
@@ -141,10 +165,10 @@ async def chat_stream(request: ChatRequest):
                 ])
                 yield f"event: sources\ndata: {sources_payload}\n\n"
 
-            # Save completed response, summary, and trigger memory extraction
-            if chat_id and ObjectId.is_valid(chat_id):
+            # Save completed response, summary, and trigger memory extraction (Only for registered users)
+            if not is_guest and chat_id and ObjectId.is_valid(chat_id):
                 user_msg = history[-1]
-
+                
                 final_content = full_response
                 extracted_sources = []
 
@@ -158,20 +182,21 @@ async def chat_stream(request: ChatRequest):
 
                 ai_msg = {"role": "assistant", "content": final_content, "sources": extracted_sources}
 
-                chat = await chats_collection.find_one({"_id": ObjectId(chat_id)})
-                update_query = {
-                    "$push": {"messages": {"$each": [user_msg, ai_msg]}},
-                    "$set": {"summary": updated_summary}
-                }
+                chat = await chats_collection.find_one({"_id": ObjectId(chat_id), "user_id": user_id})
+                if chat:
+                    update_query = {
+                        "$push": {"messages": {"$each": [user_msg, ai_msg]}},
+                        "$set": {"summary": updated_summary},
+                    }
 
-                if chat and len(chat.get("messages", [])) == 0:
-                    title_snippet = user_msg["content"][:25] + ("..." if len(user_msg["content"]) > 25 else "")
-                    update_query["$set"]["title"] = title_snippet
+                    if len(chat.get("messages", [])) == 0:
+                        title_snippet = user_msg["content"][:25] + ("..." if len(user_msg["content"]) > 25 else "")
+                        update_query["$set"]["title"] = title_snippet
 
-                await chats_collection.update_one(
-                    {"_id": ObjectId(chat_id)},
-                    update_query
-                )
+                    await chats_collection.update_one(
+                        {"_id": ObjectId(chat_id), "user_id": user_id},
+                        update_query,
+                    )
 
                 if request.messages:
                     user_last_prompt = request.messages[-1].content
@@ -182,26 +207,32 @@ async def chat_stream(request: ChatRequest):
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-    except Exception as e:
-        print(f"Error in chat_stream: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
 
 
 @app.get("/chats")
-async def get_chats():
+async def get_chats(current_user: Optional[dict] = Depends(get_current_user_optional)):
+    if not current_user:
+        return []  
+    
+    user_id = str(current_user["_id"])
     chats = []
-    cursor = chats_collection.find({}, {"messages": 0}).sort("created_at", -1)
+    cursor = chats_collection.find({"user_id": user_id}, {"messages": 0}).sort("created_at", -1)
     async for doc in cursor:
         chats.append({"id": str(doc["_id"]), "title": doc.get("title", "New Conversation")})
     return chats
 
 
 @app.get("/chats/{chat_id}")
-async def get_chat_history(chat_id: str):
+async def get_chat_history(chat_id: str, current_user: dict = Depends(get_current_user)):
     if not ObjectId.is_valid(chat_id):
         raise HTTPException(status_code=400, detail="Invalid Chat ID")
 
-    chat = await chats_collection.find_one({"_id": ObjectId(chat_id)})
+    chat = await chats_collection.find_one({"_id": ObjectId(chat_id), "user_id": str(current_user["_id"])})
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
@@ -218,16 +249,18 @@ async def get_chat_history(chat_id: str):
     return {"id": str(chat["_id"]), "messages": cleaned_messages}
 
 
-
 @app.post("/upload")
 async def upload_file(
     files: List[UploadFile] = File(...),
-    user_id: str = Form("default_user")
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ):
+    is_guest = current_user is None
+    user_id = str(current_user["_id"]) if not is_guest else "guest_user"
+    
     try:
         total_chunks = 0
         uploaded_summary = []
-        chunks= 0
+        chunks = 0
 
         allowed_extensions = {
             "pdf", "txt", "docx", "csv", "png", "jpg", "jpeg", "webp"
@@ -246,7 +279,6 @@ async def upload_file(
                     detail=f"Unsupported file type: {ext or 'unknown'}"
                 )
 
-            # Unique filename prevents overwriting existing uploads.
             saved_name = f"{uuid.uuid4().hex}_{original_name}"
             file_path = os.path.join(UPLOAD_DIR, saved_name)
 
@@ -257,12 +289,13 @@ async def upload_file(
 
             chunks = 0
 
-            if ext in {"pdf", "txt", "docx", "csv"}:
+            # Only ingest document chunks into vector database if user is authenticated
+            if ext in {"pdf", "txt", "docx", "csv"} and not is_guest:
                 ingest_result = await ingest_document(
                     file_path=file_path,
                     filename=original_name,
                     file_type=ext,
-                    user_id=user_id
+                    user_id=user_id,
                 )
                 document_id = ingest_result.get("document_id")
                 chunks = ingest_result.get("total_chunks", 0)
@@ -279,7 +312,7 @@ async def upload_file(
                 "chunks": chunks
             })
 
-        return {
+        return { 
             "message": f"Successfully uploaded {len(files)} file(s).",
             "files": uploaded_summary,
             "total_chunks": total_chunks
@@ -292,20 +325,21 @@ async def upload_file(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
 class RenameChatRequest(BaseModel):
     title: str
 
 
 @app.patch("/chats/{chat_id}")
-async def rename_chat(chat_id: str, request: RenameChatRequest):
+async def rename_chat(chat_id: str, request: RenameChatRequest, current_user: dict = Depends(get_current_user)):
     if not ObjectId.is_valid(chat_id):
-        raise HTTPException(status_code=400, detail="Invalid chat ID")
+        raise HTTPException(status_code=400, detail="Invalid chat ID.")
+    title = request.title.strip()
+    if not title or len(title) > 100:
+        raise HTTPException(status_code=400, detail="Title must contain 1-100 characters.")
 
     result = await chats_collection.update_one(
-        {"_id": ObjectId(chat_id)},
-        {"$set": {"title": request.title}}
+        {"_id": ObjectId(chat_id), "user_id": str(current_user["_id"])},
+        {"$set": {"title": request.title}},
     )
 
     if result.matched_count == 0:
@@ -315,16 +349,16 @@ async def rename_chat(chat_id: str, request: RenameChatRequest):
 
 
 @app.delete("/chats/{chat_id}")
-async def delete_chat(chat_id: str):
+async def delete_chat(chat_id: str, current_user: dict = Depends(get_current_user)):
     if not ObjectId.is_valid(chat_id):
-        raise HTTPException(status_code=400, detail="Invalid chat ID")
+        raise HTTPException(status_code=400, detail="Invalid chat ID.")
 
-    result = await chats_collection.delete_one({"_id": ObjectId(chat_id)})
+    result = await chats_collection.delete_one({"_id": ObjectId(chat_id), "user_id": str(current_user["_id"])})
 
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Chat not found")
+        raise HTTPException(status_code=404, detail="Chat not found.")
 
-    return {"message": "Chat deleted successfully"}
+    return {"message": "Chat deleted successfully."}
 
 
 @app.post("/auth/registry", status_code=201)
@@ -344,7 +378,7 @@ async def register(request: RegistryRequest):
     except DuplicateKeyError:
         raise HTTPException(
             status_code=409,
-            detail="An accound with this email already exists.",
+            detail="An account with this email already exists.",
         )
     return {
         "message": "Account created successfully.",
@@ -360,7 +394,7 @@ async def login(request: LoginRequest):
 
     user = await users_collection.find_one({"email": email})
 
-    if(user is None or not verify_password(request.password, user.get("password_hash", ""))):
+    if user is None or not verify_password(request.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid email or password.", headers={"WWW-Authenticate": "Bearer"})
 
     token = create_access_token(str(user["_id"]))

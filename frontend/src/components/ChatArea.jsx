@@ -1,9 +1,9 @@
 import { useState } from "react";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
+import { apiFetch } from "../api";
 import './ChatArea.css'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 const SUGGESTED_PROMPTS = [
     {
         icon: "🚀",
@@ -34,7 +34,8 @@ export default function ChatArea({
     onStopGeneration,
     onEditMessage,
     isSidebarOpen,
-    onToggleSidebar
+    onToggleSidebar,
+    onLogout
 }) {
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
@@ -51,14 +52,16 @@ export default function ChatArea({
         files.forEach((file) => {
             formData.append('files', file);
         });
-        formData.append('user_id', 'default_user');
-
         try {
-            const res = await fetch(`${API_BASE_URL}/upload`, {
+            const res = await apiFetch("/upload", {
                 method: 'POST',
                 body: formData,
             });
 
+            if (res.status === 401) {
+                onLogout()
+                throw new Error("Session expired. Please log in again.");
+            }
             const data = await res.json();
             if (!res.ok) {
                 throw new Error(data.detail || 'Failed to upload documents');
@@ -126,6 +129,19 @@ export default function ChatArea({
                     </button>
                 </div>
                 <h3>Laika Chat Assistant</h3>
+
+                <div className="header-right">
+                    <button className="logout-btn" type="button" onClick={onLogout} title="Log out of Laika" style={{
+                            padding: '6px 12px',
+                            background: '#272732',
+                            color: '#ff7777',
+                            border: '1px solid #3f3f4e',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: '500',
+                            fontSize: '13px'
+                        }}>Log Out</button>
+                </div>
             </header>
 
             {messages.length === 0 ? (

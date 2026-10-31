@@ -15,17 +15,17 @@ from bson import ObjectId
 
 chunks_collection = db["rag_chunks"]
 
-def dot_product(vec_a: List[float], vec_b: List[float])->float:
+def dot_product(vec_a: List[float], vec_b: List[float]) -> float:
     """Calculate dot-product between two equal-length vectors."""
     if len(vec_a) != len(vec_b):
         raise ValueError(f"Vector dimension do not match: {len(vec_a)} vs {len(vec_b)}")
-    return sum(a*b for a,b in zip(vec_a, vec_b))
+    return sum(a * b for a, b in zip(vec_a, vec_b))
 
-def vector_magnitude(vec: List[float])-> float:
-    """Calculate the Euclidean norm ((length)) of a vector."""
-    return math.sqrt(sum(x*x for x in vec))
+def vector_magnitude(vec: List[float]) -> float:
+    """Calculate the Euclidean norm (length) of a vector."""
+    return math.sqrt(sum(x * x for x in vec))
 
-def cosine_similarity(vec_a: List[float], vec_b: List[float])->float:
+def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
     """
     Calculate cosine similarity between two vectors:
     cos(theta) = (A.B)/ (|A| * |B|)
@@ -37,20 +37,23 @@ def cosine_similarity(vec_a: List[float], vec_b: List[float])->float:
     if mag_a == 0.0 or mag_b == 0.0:
         return 0.0
 
-    return dot_product(vec_a, vec_b)/(mag_a*mag_b)
+    return dot_product(vec_a, vec_b) / (mag_a * mag_b)
 
 
-async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: float = 0.20, user_id: str = "default_user", document_ids: List[str] | None = None) -> List[Dict[str, Any]]:
+async def search_similar_chunks(
+    query: str,
+    user_id: str,
+    top_k: int = 5,
+    score_threshold: float = 0.0,
+    document_ids: List[str] | None = None
+) -> List[Dict[str, Any]]:
     """
     Generates an embedding for the query, compares it against stored chunk
     embeddings for a given user (optionally filtered by document IDs), ranks them by cosine similarity, and returns
     the Top-K highest scoring chunks.
     """
-    query_vector = generate_embedding(query)
-
     db_query = {"user_id": user_id}
 
-    # Attached-document mode: restrict the search to selected documents if provided.
     if document_ids:
         try:
             object_ids = [ObjectId(doc_id) for doc_id in document_ids]
@@ -59,84 +62,156 @@ async def search_similar_chunks(query: str, top_k: int = 2, score_threshold: flo
             print(f"[RAG] Invalid document ID: {e}")
             return []
 
-    # Fetch stored chunks based on query rules
-    stored_chunks = await chunks_collection.find(db_query).to_list(length=100000)
+    # ----------------------------------
+    # SUMMARY MODE
+    # ----------------------------------
+    summary_keywords = [
+        "summarize",
+        "summary",
+        "summarise",
+        "explain document",
+        "give summary"
+    ]
+
+    if any(keyword in query.lower() for keyword in summary_keywords):
+        stored_chunks = await chunks_collection.find(
+            db_query
+        ).sort("chunk_index", 1).to_list(length=100000)
+
+        print(
+            f"[RAG DEBUG] SUMMARY MODE: "
+            f"Returning {len(stored_chunks)} chunks"
+        )
+
+        results = []
+
+        for chunk in stored_chunks:
+            results.append({
+                "chunk_id": str(chunk["_id"]),
+                "document_id": str(chunk["document_id"]),
+                "user_id": chunk["user_id"],
+                "chunk_index": chunk.get("chunk_index", 0),
+                "filename": chunk.get("filename", "unknown"),
+                "text": chunk["text"],
+                "score": 1.0
+            })
+
+        return results
+
+    # ----------------------------------
+    # NORMAL VECTOR SEARCH MODE
+    # ----------------------------------
+    query_vector = generate_embedding(query)
+
+    stored_chunks = await chunks_collection.find(
+        db_query
+    ).to_list(length=100000)
 
     print(f"[RAG DEBUG] MongoDB filter: {db_query}")
     print(f"[RAG DEBUG] Matched chunks: {len(stored_chunks)}")
-    print("[RAG DEBUG] Matched filenames:",sorted({chunk.get("filename", "unknown") for chunk in stored_chunks}))
 
     scored_chunks = []
 
     for chunk in stored_chunks:
         chunk_vector = chunk.get("embedding")
 
-        if chunk_vector:
-            score = cosine_similarity(query_vector, chunk_vector)
+        if not chunk_vector:
+            continue
 
-            # Debug: inspect retrieval quality
-            print(
-                f"[RAG DEBUG] File={chunk.get('filename')} "
-                f"Chunk={chunk.get('chunk_index')} "
-                f"Score={score:.4f}"
-            )
+        score = cosine_similarity(
+            query_vector,
+            chunk_vector
+        )
 
-            if score >= score_threshold:
-                scored_chunks.append({
-                    "chunk_id": str(chunk["_id"]),
-                    "chunk_index": chunk.get("chunk_index", 0),
-                    "filename": chunk.get("filename", "unknown"),
-                    "text": chunk["text"],
-                    "score": score
-                })
+        print(
+            f"[RAG DEBUG] "
+            f"File={chunk.get('filename')} "
+            f"Chunk={chunk.get('chunk_index')} "
+            f"Score={score:.4f}"
+        )
 
-    # Sort all matching chunks by score descending AFTER the loop completes
-    scored_chunks.sort(key=lambda x: x["score"], reverse=True)
-    results = scored_chunks[:int(top_k)]
+        if score >= score_threshold:
+            scored_chunks.append({
+                "chunk_id": str(chunk["_id"]),
+                "document_id": str(chunk["document_id"]),
+                "user_id": chunk["user_id"],
+                "chunk_index": chunk.get("chunk_index", 0),
+                "filename": chunk.get("filename", "unknown"),
+                "text": chunk["text"],
+                "score": score
+            })
 
-    print(f"[RAG DEBUG] User query: {query}")
+    scored_chunks.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+    results = scored_chunks[:top_k]
+
     print(f"[RAG DEBUG] Stored chunks: {len(stored_chunks)}")
+    print(f"[RAG DEBUG] Above threshold: {len(scored_chunks)}")
     print(f"[RAG DEBUG] Retrieved chunks: {len(results)}")
 
     return results
 
 
-def build_retrieval_context(retrieved_chunks: List[Dict[str, Any]]) -> str:
+async def fetch_all_document_chunks(
+    user_id: str,
+    document_ids: List[str]
+) -> List[Dict[str, Any]]:
     """
-    Phase 4.1: Formats Top-K retrieved chunks into a single, structured
-    context block ready for LLM prompt injection.
+    Fetches all chunks sequentially for specific document IDs, bypassing embeddings 
+    entirely for reliable document summarization.
+    """
+    try:
+        object_ids = [ObjectId(x) for x in document_ids]
+    except Exception as e:
+        print(f"[RAG] Invalid document ID for full fetch: {e}")
+        return []
 
-    Phase 4.4: Formats Top-K retrieved chunks into a single structured context block.
-    If no chunks meet the relevance threshold, returns an explicit rejection instruction.
+    chunks = await chunks_collection.find({
+        "user_id": user_id,
+        "document_id": {"$in": object_ids}
+    }).sort("chunk_index", 1).to_list(length=100000)
+
+    return [{
+        "chunk_id": str(chunk["_id"]),
+        "document_id": str(chunk["document_id"]),
+        "user_id": chunk["user_id"],
+        "chunk_index": chunk.get("chunk_index", 0),
+        "filename": chunk.get("filename", "unknown"),
+        "text": chunk["text"],
+        "score": 1.0
+    } for chunk in chunks]
+
+
+def build_retrieval_context(
+    retrieved_chunks: List[Dict[str, Any]]
+) -> str:
+    """
+    Formats Top-K retrieved chunks into a single structured context block.
     """
     if not retrieved_chunks:
         return (
             "[NO RELEVANT DOCUMENTATION FOUND]\n"
-            "None of the stored document chunks met the minimum relevance threshold for this query. "
-            "If the user is asking a question specifically about uploaded documents, state clearly "
-            "that the retrieved documents do not contain this information."
+            "No matching content was found."
         )
 
     context_blocks = []
-    for idx, chunk in enumerate(retrieved_chunks, start=1):
-        filename = chunk.get("filename", "Unknown Source")
-        chunk_idx = chunk.get("chunk_index", "N/A")
-        score = chunk.get("score", 0.0)
-        text = chunk.get("text", "").strip()
 
+    for idx, chunk in enumerate(retrieved_chunks, start=1):
         block = (
             f"--- [Document {idx}] ---\n"
-            f"Source: {filename}\n"
-            f"Chunk: {chunk_idx}\n"
-            f"Relevance Score: {score:.4f}\n"
-            f"Content:\n{text}\n"
+            f"Source: {chunk.get('filename')}\n"
+            f"Chunk: {chunk.get('chunk_index')}\n"
+            f"Content:\n"
+            f"{chunk.get('text', '')}\n\n"
         )
+
         context_blocks.append(block)
 
-    formatted_context = (
+    return (
         "[START RETRIEVED KNOWLEDGE]\n"
-        + "\n".join(context_blocks)
-        + "[END RETRIEVED KNOWLEDGE]"
+        + "".join(context_blocks)
+        + "\n[END RETRIEVED KNOWLEDGE]"
     )
-    
-    return formatted_context

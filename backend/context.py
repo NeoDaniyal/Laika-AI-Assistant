@@ -2,7 +2,7 @@
 context.py
 ==========
 Manages context window truncation, session summarization, query-relevant long-term memory retrieval,
-and RAG document context injection.
+and RAG document context injection with strict user ownership isolation.
 """
 
 from typing import List, Dict, Any, Optional
@@ -17,13 +17,23 @@ def estimate_tokens(text: str) -> int:
 
 async def build_context(
     messages: List[Dict[str, str]], 
+    user_id: str,
     existing_summary: str = "", 
     max_tokens: int = 3000,
-    user_id: str = "default_user",
     retrieved_chunks: Optional[List[Dict[str, Any]]] = None,
     score_threshold: float = 0.45,
     enable_rag: bool = True
 ) -> Dict[str, Any]:
+
+    is_guest = (user_id == "guest_user")
+
+    # Fail closed: never inject pre-supplied chunks without matching ownership metadata.
+    if retrieved_chunks is not None:
+        retrieved_chunks = [
+            chunk
+            for chunk in retrieved_chunks
+            if chunk.get("user_id") == user_id
+        ]
 
     system_msg = next((m for m in messages if m["role"] == "system"), None)
     chat_messages = [m for m in messages if m["role"] != "system"]
@@ -35,30 +45,37 @@ async def build_context(
             last_user_prompt = msg["content"]
             break
 
-    # 1. Selectively retrieve relevant memories based on query
-    memory_block = await format_relevant_memories_for_prompt(
-        user_query=last_user_prompt, 
-        user_id=user_id
-    )
-    # 2. Retrieve Top-K RAG chunks if enabled and not directly provided
-    document_ids = []
-    for msg in reversed(chat_messages):
-        if msg.get("role") == "user":
-            document_ids = msg.get("document_ids") or []
-            break
-    if not document_ids and last_user_prompt:
-        is_summary_query = any(kw in last_user_prompt.lower() for kw in ["summarize", "summary", "overview", "what is this document about"])
-        if is_summary_query:
-            from backend.rag import document_collection # adjust import if collection is defined elsewhere
-            latest_doc = await document_collection.find_one({"user_id": user_id}, sort=[("uploaded_at", -1)])
-            if latest_doc:
-                document_ids = [str(latest_doc["_id"])]
-                print(f"[RAG DEBUG] Auto-targeted latest document ID: {document_ids[0]} ({latest_doc.get('filename')})")
+    # 1. Selectively retrieve relevant memories based on query (Skip for guests)
+    memory_block = ""
+    if not is_guest:
+        memory_block = await format_relevant_memories_for_prompt(
+            user_query=last_user_prompt, 
+            user_id=user_id
+        )
 
+    # 2. Retrieve Top-K RAG chunks if enabled and not directly provided (Skip for guests)
+    document_ids = []
+    if not is_guest:
+        for msg in reversed(chat_messages):
+            if msg.get("role") == "user":
+                document_ids = msg.get("document_ids") or []
+                break
+
+        # Smart fallback: Auto-target the user's latest uploaded document for summary queries if none provided
+        if not document_ids and last_user_prompt:
+            is_summary_query = any(kw in last_user_prompt.lower() for kw in ["summarize", "summary", "overview", "what is this document about"])
+            if is_summary_query:
+                from backend.rag import document_collection
+                latest_doc = await document_collection.find_one({"user_id": user_id}, sort=[("uploaded_at", -1)])
+                if latest_doc:
+                    document_ids = [str(latest_doc["_id"])]
+                    print(f"[RAG DEBUG] Auto-targeted latest document ID: {document_ids[0]} ({latest_doc.get('filename')})")
+
+    print(f"[RAG DEBUG] User ID: {user_id} | Is Guest: {is_guest}")
     print(f"[RAG DEBUG] Last user prompt: {last_user_prompt}")
     print(f"[RAG DEBUG] Selected document IDs: {document_ids}")
 
-    if enable_rag and retrieved_chunks is None and last_user_prompt:
+    if enable_rag and not is_guest and retrieved_chunks is None and last_user_prompt:
         is_summary_query = any(kw in last_user_prompt.lower() for kw in ["summarize", "summary", "overview", "what is this document about"])
 
         effective_top_k = 10 if (is_summary_query and document_ids) else 2
@@ -66,8 +83,8 @@ async def build_context(
         
         retrieved_chunks = await search_similar_chunks(
             query=last_user_prompt,
-            top_k=effective_top_k,
             user_id=user_id,
+            top_k=effective_top_k,
             score_threshold=effective_threshold,
             document_ids=document_ids
         )
@@ -84,9 +101,9 @@ async def build_context(
     if existing_summary:
         final_messages.append({"role": "system", "content": f"[Active Session Summary]: {existing_summary}"})
 
-    # Inject RAG Document Knowledge
-    if enable_rag and last_user_prompt:
-        rag_context = build_retrieval_context(retrieved_chunks or [])
+    # Inject RAG Document Knowledge (Only if RAG chunks are present and user is authenticated)
+    if enable_rag and not is_guest and retrieved_chunks:
+        rag_context = build_retrieval_context(retrieved_chunks)
         final_messages.append({
             "role": "system", 
             "content": (
@@ -118,7 +135,7 @@ async def build_context(
     if existing_summary:
         old_messages.insert(0, {"role": "user", "content": f"Prior Context Summary: {existing_summary}"})
 
-    new_summary =  await summarize_messages(old_messages)
+    new_summary = await summarize_messages(old_messages)
 
     if new_summary:
         final_messages.append({"role": "system", "content": f"[Active Session Summary]: {new_summary}"})
