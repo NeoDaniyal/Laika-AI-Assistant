@@ -14,13 +14,6 @@
     "evaluation_type": "reference_based"
   },
   {
-    "id": "rag_001",
-    "category": "rag",
-    "question": "According to the supplied document, what are its main points?",
-    "expected_answer": "The answer should accurately summarize the main points of the document supplied for this test.",
-    "evaluation_type": "grounded"
-  },
-  {
     "id": "instruction_001",
     "category": "instruction_following",
     "question": "Explain what an API is in exactly three bullet points.",

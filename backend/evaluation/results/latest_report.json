@@ -1,0 +1,98 @@
+{
+  "project": "Laika",
+  "model": "mercury-3",
+  "generated_at": "2026-11-01T07:22:02.110711+00:00",
+  "total_test_cases": 4,
+  "successful_generations": 4,
+  "successfully_evaluated": 4,
+  "average_response_latency_seconds": 1.776,
+  "average_scores": {
+    "correctness": 5.0,
+    "relevance": 5.0,
+    "completeness": 5.0
+  },
+  "results": [
+    {
+      "id": "general_001",
+      "category": "general_knowledge",
+      "question": "What is FastAPI, and why is it useful for building AI chatbot backends?",
+      "expected_answer": "FastAPI is a Python web framework for building APIs. It supports asynchronous request handling, request validation, and automatic API documentation, making it useful for building chatbot backends that communicate with language models, databases, and frontend applications.",
+      "generated_answer": "FastAPI is a modern, high-performance Python web framework for building APIs, built on Starlette and Pydantic. It's particularly well-suited for AI chatbot backends for these key reasons:\n\n- **Asynchronous support**: It natively supports `async`/`await`, allowing you to handle hundreds of concurrent chatbot conversations without blocking I/O or waiting on slow LLM calls.\n- **Native streaming**: It excels at Server-Sent Events (SSE) and WebSockets, making it trivial to stream tokens from an LLM to the frontend in real-time for a smooth \"typing\" effect.\n- **Pydantic validation**: It uses Python type hints to automatically validate incoming prompts and enforce strict response schemas. This ensures malformed inputs are rejected before they hit your model.\n- **High performance**: Its minimal overhead means lower latency, which is critical for interactive chatbot experiences.\n- **Automatic docs**: It generates interactive Swagger UI and ReDoc documentation from your code, making it easy to test endpoints and share API specs with frontend teams.",
+      "response_latency_seconds": 3.987,
+      "evaluation": {
+        "correctness": 5,
+        "relevance": 5,
+        "completeness": 5,
+        "reason": "The generated answer accurately defines FastAPI and provides a thorough, directly relevant explanation of its benefits for AI chatbot backends, including asynchronous support, streaming, validation, performance, and automatic docs. It exceeds the reference answer in detail without any factual errors."
+      },
+      "error": null,
+      "programmatic_checks": {
+        "check": "not_applicable",
+        "passed": null
+      },
+      "judge_latency_seconds": 1.079
+    },
+    {
+      "id": "general_002",
+      "category": "programming",
+      "question": "What is the difference between a Python list and a tuple?",
+      "expected_answer": "Lists are mutable, meaning their elements can be changed after creation. Tuples are immutable, meaning their elements cannot be reassigned after creation. Both can store multiple values and support indexing.",
+      "generated_answer": "The primary difference is **mutability**: lists are mutable (changeable in place), while tuples are immutable (cannot be altered after creation).\n\n**Key distinctions:**\n\n- **Syntax**: Lists use square brackets `[1, 2, 3]`; tuples use parentheses `(1, 2, 3)` or just commas `1, 2, 3`.\n- **Performance**: Tuples are slightly faster and use less memory because they are simpler under the hood.\n- **Use cases**: Use lists for homogeneous, dynamic collections (e.g., a list of temperatures). Use tuples for heterogeneous, fixed data (e.g., a `(x, y)` coordinate) or as dictionary keys.\n- **Methods**: Lists have many methods (`append`, `remove`, `sort`, etc.); tuples only have `count` and `index`.\n\n**Example:**\n```python\nmy_list = [1, 2, 3]\nmy_list[0] = 99  # Works\n\nmy_tuple = (1, 2, 3)\nmy_tuple[0] = 99  # Raises TypeError: 'tuple' object does not support item assignment\n```",
+      "response_latency_seconds": 1.148,
+      "evaluation": {
+        "correctness": 5,
+        "relevance": 5,
+        "completeness": 5,
+        "reason": "The generated answer is factually correct, directly addresses the question, and provides a comprehensive explanation including mutability, syntax, performance, use cases, methods, and examples. It exceeds the reference answer in detail while remaining accurate."
+      },
+      "error": null,
+      "programmatic_checks": {
+        "check": "not_applicable",
+        "passed": null
+      },
+      "judge_latency_seconds": 1.144
+    },
+    {
+      "id": "instruction_001",
+      "category": "instruction_following",
+      "question": "Explain what an API is in exactly three bullet points.",
+      "expected_answer": "The response should contain exactly three bullet points and accurately explain what an API is.",
+      "generated_answer": "- An API (Application Programming Interface) is a set of rules and protocols that allows different software applications to communicate and share data with each other.\n- It acts as an intermediary layer, defining the methods and data formats you can use to request services or information from a system without needing to know its internal workings.\n- APIs enable modular development, letting developers build on existing functionality (like payment processing or mapping) rather than rewriting it from scratch.",
+      "response_latency_seconds": 0.901,
+      "evaluation": {
+        "correctness": 5,
+        "relevance": 5,
+        "completeness": 5,
+        "reason": "The generated answer contains exactly three bullet points, each accurately describing what an API is, its role as an intermediary, and its benefits for modular development. It fully satisfies the instruction and the reference answer's criteria."
+      },
+      "error": null,
+      "programmatic_checks": {
+        "check": "exactly_three_bullet_points",
+        "passed": true,
+        "expected": 3,
+        "actual": 3
+      },
+      "judge_latency_seconds": 0.985
+    },
+    {
+      "id": "uncertainty_001",
+      "category": "uncertainty",
+      "question": "What will the exact price of a particular stock be at 3:00 PM tomorrow?",
+      "expected_answer": "The assistant should acknowledge that it cannot know the exact future stock price and should not invent a precise value.",
+      "generated_answer": "It is impossible to predict the exact price of a stock at a specific future time. Stock prices are determined by real-time supply and demand, which are influenced by unpredictable factors such as breaking news, earnings reports, macroeconomic data releases, and overall market sentiment. \n\nA model like me does not have access to live market data, nor can it forecast future price movements with certainty. Any prediction of an exact price at a specific minute would be a guess, not a fact. For financial decisions, consulting a licensed financial advisor is recommended.",
+      "response_latency_seconds": 1.068,
+      "evaluation": {
+        "correctness": 5,
+        "relevance": 5,
+        "completeness": 5,
+        "reason": "The generated answer correctly acknowledges that the exact future stock price cannot be known, explains the unpredictability of market factors, and avoids inventing a precise value. It directly addresses the question and covers all important points from the reference answer."
+      },
+      "error": null,
+      "programmatic_checks": {
+        "check": "not_applicable",
+        "passed": null
+      },
+      "judge_latency_seconds": 0.952
+    }
+  ]
+}

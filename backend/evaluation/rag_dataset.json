@@ -1,0 +1,143 @@
+
+[
+  {
+    "test_id": "rag_001",
+    "query": "What is JDBC?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [0],
+    "expected_answer": "JDBC (Java Database Connectivity) is a standard Java API that allows Java applications to access databases using a uniform interface and standard SQL queries."
+  },
+  {
+    "test_id": "rag_002",
+    "query": "Define JDBC and explain its purpose.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [0],
+    "expected_answer": "JDBC is a Java SE specification that provides a standard abstraction layer for interacting with different DBMSs. Its purposes include uniform database access, SQL execution, and result processing."
+  },
+  {
+    "test_id": "rag_003",
+    "query": "Why is JDBC used in Java applications?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [0, 1],
+    "expected_answer": "JDBC decouples application logic from the database layer, supports enterprise integration, and allows efficient reuse of database connections through connection pooling."
+  },
+  {
+    "test_id": "rag_004",
+    "query": "What are the advantages of JDBC?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [1],
+    "expected_answer": "JDBC provides platform independence, database agnosticism, object-oriented data mapping, transaction management, and performance optimizations through prepared statements and batch updates."
+  },
+  {
+    "test_id": "rag_005",
+    "query": "What are the limitations of JDBC?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [1, 2],
+    "expected_answer": "JDBC requires boilerplate resource-management code, relies on SQL strings, lacks direct ORM functionality, and does not provide built-in cache management."
+  },
+  {
+    "test_id": "rag_006",
+    "query": "Why is JDBC needed in enterprise software development?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [2],
+    "expected_answer": "JDBC provides a bridge between Java applications and databases. It translates Java object interactions into native database calls and converts relational database results into Java objects."
+  },
+  {
+    "test_id": "rag_007",
+    "query": "List the important features of JDBC.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [2],
+    "expected_answer": "JDBC features include automatic driver discovery, prepared SQL compilation, scrollable and updatable result sets, batch processing, and metadata capabilities."
+  },
+  {
+    "test_id": "rag_008",
+    "query": "Explain the evolution of JDBC versions.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [2, 3],
+    "expected_answer": "JDBC evolved from version 1.0 with basic connectivity to versions 2.0 and 3.0 with advanced result sets, batch updates and savepoints, followed by JDBC 4.x with automatic driver loading, improved exception handling, and resource management."
+  },
+  {
+    "test_id": "rag_009",
+    "query": "What are the applications of JDBC?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [3],
+    "expected_answer": "JDBC is used in financial and banking software, e-commerce portals, enterprise resource planning systems, and data warehousing and ETL utilities."
+  },
+  {
+    "test_id": "rag_010",
+    "query": "Differentiate between JDBC and ODBC.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [3, 4],
+    "expected_answer": "JDBC is designed specifically for Java applications and uses Java drivers, whereas ODBC is language-independent and relies on native drivers. They differ in platform dependencies, architecture, security, and performance."
+  },
+  {
+    "test_id": "rag_011",
+    "query": "What are the basic steps involved in executing a JDBC program?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [4],
+    "expected_answer": "The steps are importing packages, registering the driver, establishing a connection, creating a statement, executing a query, processing results, and cleaning up resources."
+  },
+  {
+    "test_id": "rag_012",
+    "query": "Explain the structure and architecture of a JDBC application.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [5],
+    "expected_answer": "A JDBC application consists of the Java application layer, JDBC API, DriverManager, JDBC driver, and database layer. The driver translates JDBC calls into the database's network protocol."
+  },
+  {
+    "test_id": "rag_013",
+    "query": "Explain how a Java application connects to a database using JDBC.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [5, 6],
+    "expected_answer": "The application adds the database driver dependency, passes a connection URL to DriverManager, which identifies the correct driver. The driver establishes a network connection, authenticates credentials, and returns a valid connection reference."
+  },
+  {
+    "test_id": "rag_014",
+    "query": "What components are required for a JDBC application?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [6, 7],
+    "expected_answer": "The components include the Java application, JDBC API package, DriverManager utility, target database driver JAR, and relational database engine."
+  },
+  {
+    "test_id": "rag_015",
+    "query": "Which packages are required for JDBC programming?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [6, 7],
+    "expected_answer": "The two primary packages are java.sql, which provides core JDBC functionality, and javax.sql, which provides extensions such as connection pooling, distributed transactions, and RowSets."
+  },
+  {
+    "test_id": "rag_016",
+    "query": "Explain the role of the java.sql package in JDBC.",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [7],
+    "expected_answer": "The java.sql package defines interfaces and classes for relational database interaction, including DriverManager, Connection, Statement, PreparedStatement, ResultSet, and SQLException."
+  },
+  {
+    "test_id": "rag_017",
+    "query": "What are the prerequisites for executing a JDBC program?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [7],
+    "expected_answer": "The prerequisites include an installed JDK, a configured database server, the correct vendor database driver JAR, valid database credentials, and IDE tools."
+  },
+  {
+    "test_id": "rag_018",
+    "query": "What is a JDBC Driver?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [8],
+    "expected_answer": "A JDBC Driver is a software component that implements the java.sql and javax.sql interfaces for a specific database engine."
+  },
+  {
+    "test_id": "rag_019",
+    "query": "Why are JDBC drivers required?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [8],
+    "expected_answer": "JDBC drivers allow Java applications to communicate with database engines by translating JDBC calls into the database-specific communication format."
+  },
+  {
+    "test_id": "rag_020",
+    "query": "What are the different types of JDBC drivers?",
+    "document_id": "6ae6f5ad6c57e7af55e014f5",
+    "relevant_chunk_indices": [8, 9],
+    "expected_answer": "The four types are JDBC-ODBC Bridge, Native-API, Network Protocol, and Thin Driver."
+  }
+]

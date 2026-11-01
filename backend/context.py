@@ -9,7 +9,11 @@ from typing import List, Dict, Any, Optional
 from backend.summarizer import summarize_messages
 from backend.memory import format_relevant_memories_for_prompt
 from backend.vector_search import search_similar_chunks, build_retrieval_context
+import time
 
+from backend.observability import get_logger, log_event
+
+logger = get_logger("laika.rag")
 
 def estimate_tokens(text: str) -> int:
     return len(text) // 4
@@ -76,17 +80,37 @@ async def build_context(
     print(f"[RAG DEBUG] Selected document IDs: {document_ids}")
 
     if enable_rag and not is_guest and retrieved_chunks is None and last_user_prompt:
-        is_summary_query = any(kw in last_user_prompt.lower() for kw in ["summarize", "summary", "overview", "what is this document about"])
+        is_summary_query = any(
+            kw in last_user_prompt.lower()
+            for kw in ["summarize", "summary", "overview", "what is this document about"]
+        )
 
         effective_top_k = 10 if (is_summary_query and document_ids) else 2
         effective_threshold = 0.05 if is_summary_query else score_threshold
-        
+
+        retrieval_start = time.perf_counter()
+
         retrieved_chunks = await search_similar_chunks(
             query=last_user_prompt,
             user_id=user_id,
             top_k=effective_top_k,
             score_threshold=effective_threshold,
             document_ids=document_ids
+        )
+
+        retrieval_duration_ms = round(
+            (time.perf_counter() - retrieval_start) * 1000, 2
+        )
+
+        log_event(
+            logger,
+            "rag_retrieval_completed",
+            duration_ms=retrieval_duration_ms,
+            retrieved_chunks=len(retrieved_chunks),
+            top_k=effective_top_k,
+            score_threshold=effective_threshold,
+            is_summary_query=is_summary_query,
+            document_filter_applied=bool(document_ids)
         )
 
     final_messages = []

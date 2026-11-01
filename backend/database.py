@@ -7,7 +7,8 @@ load_dotenv()
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 DB_NAME = "ai_chatbot"
 
-
 client = AsyncIOMotorClient(MONGODB_URL)
 db = client[DB_NAME]
+
 chats_collection = db["chats"]
+rag_chunks_collection = db["rag_chunks"]

@@ -437,3 +437,70 @@ body {
   overflow: hidden;
   /* Prevents whole-page scrolling */
 }
+
+
+/* ==========================================================================
+   7. RESPONSIVE DESIGN & MOBILE DRAWER ADAPTATIONS
+   ========================================================================== */
+
+/* Mobile Backdrop for Sidebar Drawer */
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Position sidebar as a floating overlay drawer on mobile */
+  .sidebar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 100;
+    width: 280px !important;
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .sidebar-container.open {
+    transform: translateX(0);
+    width: 280px !important;
+  }
+
+  .sidebar-container.closed {
+    transform: translateX(-100%);
+    width: 280px !important;
+  }
+
+  /* Show semi-transparent backdrop overlay when mobile sidebar is open */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Adjust chat rows and input paddings for smaller screens */
+  .message-row {
+    max-width: 100% !important;
+    padding: 0 8px;
+  }
+
+  .input-form {
+    padding: 12px 12px;
+  }
+
+  .input-form input {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .chat-header {
+    padding: 10px 14px;
+  }
+}

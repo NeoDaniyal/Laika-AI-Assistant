@@ -16,3 +16,6 @@ uploaded_files
 node_modules/
 dist/
 .DS_Store
+
+# Application logs
+logs/

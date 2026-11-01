@@ -3,6 +3,7 @@ import json
 import shutil
 import traceback
 import uuid
+import time
 from pathlib import Path
 from typing import List, Optional
 from bson import ObjectId
@@ -28,9 +29,23 @@ from backend.auth import (
     get_current_user,
     get_current_user_optional
 )
+from backend.observability import (configure_logging, get_logger, log_event, RequestIDMiddleware,)
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="AI Chatbot Backend")
+configure_logging()
+logger = get_logger("laika.api")
+#Temporary logging for debugging
+import logging
+
+root = logging.getLogger()
+print("Root handlers:", root.handlers)
+print("Root level:", root.level)
+print("Primp logger handlers:", logging.getLogger("primp").handlers)
+print("Primp logger propagate:", logging.getLogger("primp").propagate)
+print("Primp logger level:", logging.getLogger("primp").level)
+
+app.add_middleware(RequestIDMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -138,17 +153,31 @@ async def chat_stream(request: ChatRequest, current_user: Optional[dict] = Depen
 
         # 5. SSE Event Generator for Token & Source Citation Streaming
         async def event_generator():
+            stream_start = time.perf_counter()
+            first_event_ms = None
+
+            def record_first_event():
+                nonlocal first_event_ms
+                if first_event_ms is None:
+                    first_event_ms = round((time.perf_counter() - stream_start) * 1000, 2)
+                    log_event(logger, "sse_first_event_dispatched", first_event_ms=first_event_ms)
+
             full_response = ""
             if chat_id:
+                record_first_event()
                 yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
             
             try:
                 async for token in ask_llm_stream(truncated_history):
+                    if not full_response:
+                        record_first_event()
                     full_response += token
                     event_payload = json.dumps({"content": token})
                     yield f"event: token\ndata: {event_payload}\n\n"
             except TypeError:
                 async for token in ask_llm_stream(truncated_history):
+                    if not full_response:
+                        record_first_event()
                     full_response += token
                     event_payload = json.dumps({"content": token})
                     yield f"event: token\ndata: {event_payload}\n\n"

@@ -214,4 +214,4 @@ def build_retrieval_context(
         "[START RETRIEVED KNOWLEDGE]\n"
         + "".join(context_blocks)
         + "\n[END RETRIEVED KNOWLEDGE]"
-    )
+        )

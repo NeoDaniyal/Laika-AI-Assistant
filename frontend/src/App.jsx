@@ -10,7 +10,7 @@ export default function App() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const [isGuest, setIsGuest] = useState(false);
   
   const [token, setToken] = useState(
@@ -95,16 +95,15 @@ export default function App() {
 
   const handleAuthenticated = (accessToken) => {
     sessionStorage.setItem("laika_access_token", accessToken);
-    setIsGuest(false); // Clear guest flag upon successful login
+    setIsGuest(false);
     setAuthLoading(true);
     setToken(accessToken);
   };
 
   const handleLogout = () => {
-
     if(isGuest){
-      setIsGuest(false)
-      setMessages([])
+      setIsGuest(false);
+      setMessages([]);
       return;
     }
     sessionStorage.removeItem("laika_access_token");
@@ -174,6 +173,10 @@ export default function App() {
       const data = await res.json();
       const cleanMessages = (data.messages || []).map(parseLegacyMessageSources);
       setMessages(cleanMessages);
+      // Auto-close sidebar on mobile after selecting a chat
+      if (window.innerWidth <= 768) {
+        setIsSidebarOpen(false);
+      }
     } catch (err) {
       console.error('Failed to load conversation:', err);
     }
@@ -182,6 +185,9 @@ export default function App() {
   const handleNewChat = () => {
     setCurrentChatId(null);
     setMessages([]);
+    if (window.innerWidth <= 768) {
+      setIsSidebarOpen(false);
+    }
   };
 
   const handleSendMessage = async (userMessage, attachments = []) => {
@@ -548,6 +554,14 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Mobile Backdrop Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
       <div className={`sidebar-container ${isSidebarOpen ? 'open' : 'closed'}`}>
         <Sidebar
           chats={isGuest ? [] : chats}
@@ -558,6 +572,7 @@ export default function App() {
           onDeleteChat={handleDeleteChat}
         />
       </div>
+      
       <ChatArea
         messages={messages}
         loading={loading}

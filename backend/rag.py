@@ -52,37 +52,42 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
 def clean_text(text: str) -> str:
     text = re.sub(r'\r\n|\r', '\n', text)
     text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r' *\n *', '\n', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
+
     return text.strip()
 
 
-def chunk_text(text: str, chunk_size: int = 300, chunk_overlap: int = 50) -> List[Dict[str, Any]]:
-    words = text.split(" ")
+def chunk_text(
+    text: str,
+    chunk_size: int = 300,
+    chunk_overlap: int = 50
+) -> List[Dict[str, Any]]:
+
+    if chunk_overlap >= chunk_size:
+        raise ValueError("chunk_overlap must be smaller than chunk_size")
+
+    words = text.split()
+
     chunks = []
     start = 0
     chunk_index = 0
 
-    if len(words) <= chunk_size:
-        return [{"chunk_index": 0, "text": text, "word_count": len(words)}]
-
     while start < len(words):
         end = min(start + chunk_size, len(words))
+
         chunk_words = words[start:end]
-        chunk_str = " ".join(chunk_words)
 
         chunks.append({
             "chunk_index": chunk_index,
-            "text": chunk_str,
+            "text": " ".join(chunk_words),
             "word_count": len(chunk_words)
         })
 
         chunk_index += 1
-        start += (chunk_size - chunk_overlap)
-        if end == len(words):
-            break
+        start += chunk_size - chunk_overlap
 
     return chunks
-
 
 # ------------------------------------------------------------------
 # 2. Ingestion & Embedding Storage

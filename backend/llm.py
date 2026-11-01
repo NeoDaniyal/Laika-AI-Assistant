@@ -6,6 +6,11 @@ from pathlib import Path
 from openai import AsyncOpenAI
 from typing import AsyncGenerator, Dict, Any, List
 from backend.tools import registry
+import time
+
+from backend.observability import get_logger, log_event
+
+logger = get_logger("laika.llm")
 
 load_dotenv()
 
@@ -469,6 +474,20 @@ async def ask_llm_stream(messages: List[Dict[str, str]]) -> AsyncGenerator[str, 
 
 
     # 6. Standard conversational streaming through the actual LLM
+
+    llm_start = time.perf_counter()
+    first_token_ms = None
+    output_chars = 0
+    finish_reason = None
+
+    log_event(
+        logger,
+        "llm_generation_started",
+        model="mercury-3",
+        streaming=not is_search_query,
+        search_mode=is_search_query
+    )
+
     try:
         response = await client.chat.completions.create(
             model="mercury-3",
@@ -479,21 +498,99 @@ async def ask_llm_stream(messages: List[Dict[str, str]]) -> AsyncGenerator[str, 
 
         if is_search_query:
             content = response.choices[0].message.content or ""
+
+            output_chars = len(content)
+            finish_reason = response.choices[0].finish_reason
+
             if looks_like_tool_call(content):
                 print("[SEARCH DEBUG] Model returned raw tool-call text.")
-                yield "I found search results, but couldn't generate a clean summary. Please try the search again."
+                yield (
+                    "I found search results, but couldn't generate "
+                    "a clean summary. Please try the search again."
+                )
             else:
                 yield content
+
         else:
             async for chunk in response:
                 if chunk.choices:
-                    content = chunk.choices[0].delta.content
+                    choice = chunk.choices[0]
+
+                    if choice.finish_reason:
+                        finish_reason = choice.finish_reason
+
+                    content = choice.delta.content
+
                     if content:
+                        if first_token_ms is None:
+                            first_token_ms = round(
+                                (time.perf_counter() - llm_start) * 1000, 2
+                            )
+
+                        output_chars += len(content)
                         yield content
+
+        total_duration_ms = round(
+            (time.perf_counter() - llm_start) * 1000, 2
+        )
+
+        log_event(
+            logger,
+            "llm_generation_completed",
+            model="mercury-3",
+            duration_ms=total_duration_ms,
+            first_token_ms=first_token_ms,
+            output_chars=output_chars,
+            finish_reason=finish_reason,
+            streaming=not is_search_query
+        )
 
         if source_list:
             yield f"\n__SOURCES_JSON__:{json.dumps(source_list)}"
 
     except Exception as e:
-        print(f"Error in ask_llm_stream: {e}")
+        total_duration_ms = round(
+            (time.perf_counter() - llm_start) * 1000, 2
+        )
+
+        log_event(
+            logger,
+            "llm_generation_failed",
+            model="mercury-3",
+            duration_ms=total_duration_ms,
+            first_token_ms=first_token_ms,
+            output_chars=output_chars,
+            error_type=type(e).__name__
+        )
+
+        logger.exception("LLM generation failed")
+
         yield f"\n[Error streaming response: {str(e)}]"
+
+async def ask_llm_for_evaluation(
+    messages: List[Dict[str, str]]
+) -> str:
+    """
+    Generate a non-streaming response for evaluation
+    and expose completion metadata for debugging.
+    """
+    response = await client.chat.completions.create(
+        model="mercury-3",
+        messages=messages,
+        temperature=0,
+        max_tokens=2048,
+    )
+
+    choice = response.choices[0]
+
+    print(
+        "[EVALUATION DEBUG]",
+        {
+            "finish_reason": choice.finish_reason,
+            "completion_tokens": response.usage.completion_tokens
+            if response.usage
+            else None,
+        },
+    )
+
+    return choice.message.content or ""

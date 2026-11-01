@@ -131,23 +131,13 @@ export default function ChatArea({
                 <h3>Laika Chat Assistant</h3>
 
                 <div className="header-right">
-                    <button className="logout-btn" type="button" onClick={onLogout} title="Log out of Laika" style={{
-                            padding: '6px 12px',
-                            background: '#272732',
-                            color: '#ff7777',
-                            border: '1px solid #3f3f4e',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontWeight: '500',
-                            fontSize: '13px'
-                        }}>Log Out</button>
+                    <button className="logout-btn" type="button" onClick={onLogout} title="Log out of Laika">Log Out</button>
                 </div>
             </header>
 
             {messages.length === 0 ? (
                 <div className="welcome-screen">
                     <div className="welcome-heading">
-                        {/* Updated greeting with your correct name */}
                         <h1 className="neon-gradient-text">Hello, Monatasha Zara</h1>
                         <h2 className="welcome-subtext">What's on your mind today?</h2>
                     </div>
