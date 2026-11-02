@@ -7,3 +7,4 @@ python-dotenv
 requests
 httpx
 openai
+sentence-transformers
